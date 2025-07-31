@@ -1,4 +1,4 @@
--- H2 Database Schema for IMC Accident MCP Server
+-- Database Schema for IMC Policy MCP Server (H2/PostgreSQL compatible)
 
 -- Create customers table
 CREATE TABLE IF NOT EXISTS customers (
@@ -11,17 +11,4 @@ CREATE TABLE IF NOT EXISTS customers (
     city VARCHAR(100),
     state VARCHAR(50),
     zip_code VARCHAR(10)
-);
-
--- Create accidents table
-CREATE TABLE IF NOT EXISTS accidents (
-    accident_id INTEGER PRIMARY KEY,
-    policy_id INTEGER NOT NULL,
-    vehicle_id INTEGER NOT NULL,
-    driver_id INTEGER NOT NULL,
-    accident_timestamp TIMESTAMP WITH TIME ZONE NOT NULL,
-    latitude DECIMAL(10,8),
-    longitude DECIMAL(11,8),
-    g_force DECIMAL(5,2),
-    description TEXT
 );

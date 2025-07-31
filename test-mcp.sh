@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Unified MCP Server Test Script
-# Usage: ./test-mcp.sh [--sse|--stdio] [--build] [--test-tools] [--help]
+# IMC Policy MCP Server Test Script
+# Usage: ./test-mcp-new.sh --local [--sse|--stdio] [--build] [--test-tools] [--help]
 
 set -e
 
@@ -22,9 +22,12 @@ GEAR="⚙️"
 TEST_TUBE="🧪"
 PACKAGE="📦"
 TOOLS="🔧"
+CLOUD="☁️"
+LOCAL="🏠"
 
 # Default values
-MODE="sse"
+ENVIRONMENT=""
+TRANSPORT="sse"
 BUILD=false
 TEST_TOOLS=false
 JAR_FILE="target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar"
@@ -85,10 +88,9 @@ kill_existing_servers() {
 test_stdio_tools() {
     echo -e "${YELLOW}Starting server for tool discovery and testing...${NC}"
     
-    # Use the proven approach from old-mcp: just verify server starts properly
     echo -e "${BLUE}${TOOLS} Testing STDIO server startup and tool registration...${NC}"
     
-    local tools="queryCustomer queryAccidents"
+    local tools="queryCustomer testAIModels"
     echo -e "${GREEN}${CHECK_MARK} Tools identified from codebase${NC}"
     echo -e "${CYAN}Available tools:${NC}"
     echo "$tools" | tr ' ' '\n' | while read -r tool; do
@@ -108,7 +110,7 @@ test_stdio_tools() {
     # Check if process is running (simple health check)
     if ps -p $SERVER_PID > /dev/null 2>&1; then
         echo -e "  ${GREEN}→${NC} Server process started successfully (PID: $SERVER_PID)"
-        echo -e "  ${GREEN}→${NC} Server logs show 2 tools registered (queryCustomer, queryAccidents)"
+        echo -e "  ${GREEN}→${NC} Server logs show tools registered (queryCustomer, testAIModels)"
         echo -e "  ${GREEN}→${NC} STDIO transport configured properly"
         
         # Kill the server
@@ -126,12 +128,12 @@ test_stdio_tools() {
     echo ""
     echo -e "${BLUE}📋 To test with Claude Desktop:${NC}"
     echo -e "${YELLOW}  1. Add this to your Claude Desktop config:${NC}"
-    echo -e '    "mcp-server": {'
+    echo -e '    "imc-policy-server": {'
     echo -e '      "command": "java",'
-    echo -e '      "args": ["-Dspring.profiles.active=stdio-test", "-jar", "'$(pwd)'/target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar"]'
+    echo -e '      "args": ["-Dspring.profiles.active='$PROFILE'", "-jar", "'$(pwd)'/target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar"]'
     echo -e '    }'
     echo -e "${YELLOW}  2. Restart Claude Desktop${NC}"
-    echo -e "${YELLOW}  3. Test the tools: queryCustomer and queryAccidents${NC}"
+    echo -e "${YELLOW}  3. Test the tools: queryCustomer, testAIModels${NC}"
 }
 
 # Function to test tools in SSE mode  
@@ -185,10 +187,10 @@ test_sse_tools() {
     
     # Test 3: Tools Discovery Verification
     echo -e "${BLUE}Verifying server tool registration...${NC}"
-    echo -e "  ${GREEN}✓${NC} Server started with 2 tools registered (from logs)"
+    echo -e "  ${GREEN}✓${NC} Server started with tools registered (from logs)"
     echo -e "  ${CYAN}Available tools:${NC}"
     echo -e "    ${GREEN}•${NC} queryCustomer - Query customer information by customer ID"
-    echo -e "    ${GREEN}•${NC} queryAccidents - Query accident information by customer ID"
+    echo -e "    ${GREEN}•${NC} testAIModels - Test AI model connectivity (chat and embedding models)"
     ((tests_passed++))
     
     # Stop the server
@@ -206,16 +208,19 @@ test_sse_tools() {
     fi
 }
 
-
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        --local)
+            ENVIRONMENT="local"
+            shift
+            ;;
         --sse)
-            MODE="sse"
+            TRANSPORT="sse"
             shift
             ;;
         --stdio)
-            MODE="stdio"
+            TRANSPORT="stdio"
             shift
             ;;
         --build)
@@ -227,39 +232,49 @@ while [[ $# -gt 0 ]]; do
             shift
             ;;
         -h|--help)
-            echo -e "${CYAN}MCP Server Unified Test Script${NC}"
+            echo -e "${CYAN}IMC Policy MCP Server Test Script${NC}"
             echo ""
-            echo "Usage: $0 [options]"
+            echo "Usage: $0 [environment] [transport] [options]"
             echo ""
-            echo "Options:"
-            echo "  --sse         Run server in SSE (Server-Sent Events) mode [default]"
-            echo "  --stdio       Run server in STDIO mode (for Claude Desktop)"
+            echo "Environment Options:"
+            echo "  --local       Use local development environment with Ollama + H2 database"
+            echo ""
+            echo "Transport Options:"
+            echo "  --sse         Use SSE (Server-Sent Events) transport [default]"
+            echo "  --stdio       Use STDIO transport (for Claude Desktop)"
+            echo ""
+            echo "Other Options:"
             echo "  --build       Build the project before running"
-            echo "  --test-tools  Test the insurance query tools with sample data"
+            echo "  --test-tools  Test the policy query tools with sample data"
             echo "  -h, --help    Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0 --sse                    # Run in SSE mode"
-            echo "  $0 --stdio                  # Run in STDIO mode (Claude Desktop compatible)"
-            echo "  $0 --build --sse            # Build then run in SSE mode"
-            echo "  $0 --stdio --test-tools     # Run in STDIO mode and test insurance query tools"
+            echo "  $0 --local --sse               # Local environment with SSE transport"
+            echo "  $0 --local --stdio             # Local environment with STDIO transport (Claude Desktop)"
+            echo "  $0 --local --sse --build       # Build then run local SSE"
+            echo "  $0 --local --stdio --test-tools # Local STDIO with tool testing"
             echo ""
-            echo "Transport Modes:"
+            echo "Environment Details:"
+            echo "  ${LOCAL} Local:"
+            echo "    - Uses Ollama models (llama3.2:3b, nomic-embed-text)"
+            echo "    - Fallback to OpenAI if Ollama unavailable"
+            echo "    - Testcontainers PostgreSQL with sample data and vector database"
+            echo "    - Requires Docker Desktop to be running"
+            echo ""
+            echo "Transport Details:"
             echo "  SSE (Server-Sent Events):"
-            echo "    - Web-based transport"
-            echo "    - Accessible at http://localhost:8080/mcp/message"
+            echo "    - Web-based transport on http://localhost:8080/mcp/message"
             echo "    - Suitable for web-based MCP clients"
             echo ""
             echo "  STDIO (Standard Input/Output):"
-            echo "    - Command-line transport"
-            echo "    - Compatible with Claude Desktop"
+            echo "    - Command-line transport compatible with Claude Desktop"
             echo "    - Uses process input/output for communication"
             echo ""
             echo "Tool Testing:"
             echo "  The --test-tools flag will:"
             echo "  - Test the customer query tool with sample customer IDs"
-            echo "  - Test the accident query tool with sample customer IDs"
             echo "  - Verify database connectivity and tool responses"
+            echo "  - Show integration with vector database and AI models"
             exit 0
             ;;
         *)
@@ -269,6 +284,17 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Validate required environment
+if [ -z "$ENVIRONMENT" ]; then
+    echo -e "${RED}${CROSS_MARK} Environment must be specified${NC}"
+    echo -e "${YELLOW}Use: $0 --local [--sse|--stdio]${NC}"
+    echo -e "${YELLOW}Run $0 --help for more information${NC}"
+    exit 1
+fi
+
+# Set profile based on environment and transport
+PROFILE="${ENVIRONMENT}-${TRANSPORT}"
 
 # Print header
 echo -e "${PURPLE}╔══════════════════════════════════════════╗${NC}"
@@ -302,24 +328,66 @@ kill_existing_servers
 
 # Display configuration
 echo -e "${CYAN}${GEAR} Configuration:${NC}"
-echo -e "  Mode: ${YELLOW}$MODE${NC}"
-echo -e "  JAR:  ${YELLOW}$JAR_FILE${NC}"
+echo -e "  Environment: ${YELLOW}$ENVIRONMENT${NC} ${LOCAL}"
+echo -e "  Transport: ${YELLOW}$TRANSPORT${NC}"
+echo -e "  Profile: ${YELLOW}$PROFILE${NC}"
+echo -e "  JAR: ${YELLOW}$JAR_FILE${NC}"
 echo -e "  Test Tools: ${YELLOW}$TEST_TOOLS${NC}"
 echo ""
 
-# Set up Spring profile and JVM args based on mode
-if [ "$MODE" = "stdio" ]; then
-    PROFILE="stdio-test"
-    JVM_ARGS="-Dspring.profiles.active=stdio-test"
-    echo -e "${BLUE}${TEST_TUBE} IMC Policy MCP Server STDIO Mode Configuration${NC}"
+# Set JVM args based on profile
+JVM_ARGS="-Dspring.profiles.active=$PROFILE"
+
+# Environment-specific configuration messages and API key detection
+if [ "$ENVIRONMENT" = "local" ]; then
+    echo -e "${BLUE}${TEST_TUBE} ${LOCAL} Local Development Environment${NC}"
+    echo -e "${YELLOW}• Testcontainers PostgreSQL with sample data and vector database${NC}"
+    echo -e "${YELLOW}• Requires Docker Desktop to be running${NC}"
+    echo ""
+    
+    echo -e "${BLUE}${GEAR} AI Model Configuration:${NC}"
+    
+    # Check for OpenAI API key
+    if [ -n "${OPENAI_API_KEY:-}" ] && [ "${OPENAI_API_KEY}" != "" ]; then
+        echo -e "${GREEN}✓ OpenAI API Key detected${NC} (Primary models)"
+        echo -e "  ${CYAN}Chat Model: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}${NC}"
+        echo -e "  ${CYAN}Embedding Model: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}${NC}"
+    else
+        echo -e "${YELLOW}⚠ OpenAI API Key not found${NC}"
+    fi
+    
+    # Check for Ollama
+    if command -v ollama >/dev/null 2>&1; then
+        echo -e "${GREEN}✓ Ollama CLI detected${NC} (Fallback models)"
+        echo -e "  ${CYAN}Chat Model: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}${NC}"
+        echo -e "  ${CYAN}Embedding Model: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}${NC}"
+        echo -e "  ${CYAN}Base URL: ${OLLAMA_BASE_URL:-http://localhost:11434}${NC}"
+    else
+        echo -e "${YELLOW}⚠ Ollama CLI not found${NC}"
+    fi
+    
+    # Model priority explanation
+    echo ""
+    echo -e "${BLUE}${GEAR} Model Selection Priority:${NC}"
+    if [ -n "${OPENAI_API_KEY:-}" ] && [ "${OPENAI_API_KEY}" != "" ]; then
+        echo -e "${GREEN}1. OpenAI models (API key available)${NC}"
+        echo -e "${YELLOW}2. Ollama models (fallback)${NC}"
+    else
+        echo -e "${YELLOW}1. Ollama models (primary - no OpenAI API key)${NC}"
+        echo -e "${RED}2. OpenAI models (unavailable - no API key)${NC}"
+    fi
+fi
+
+# Transport-specific configuration and execution
+if [ "$TRANSPORT" = "stdio" ]; then
+    echo -e "${BLUE}${TEST_TUBE} STDIO Transport Mode${NC}"
     echo -e "${YELLOW}Compatible with Claude Desktop${NC}"
-    echo -e "${YELLOW}Using H2 test database with sample insurance data${NC}"
     
     if [ "$TEST_TOOLS" = true ]; then
         echo -e "${CYAN}${TOOLS} Testing tools in STDIO mode...${NC}"
         test_stdio_tools
     else
-        echo -e "${YELLOW}Use --test-tools to test insurance query tools${NC}"
+        echo -e "${YELLOW}Use --test-tools to test policy query tools${NC}"
         echo ""
         echo -e "${GREEN}${ROCKET} Starting server in STDIO mode...${NC}"
         echo -e "${PURPLE}This runs exactly as Claude Desktop would${NC}"
@@ -331,12 +399,9 @@ if [ "$MODE" = "stdio" ]; then
         java $JVM_ARGS -jar "$JAR_FILE"
     fi
 else
-    PROFILE="sse-test"
-    JVM_ARGS="-Dspring.profiles.active=sse-test"
-    echo -e "${BLUE}${TEST_TUBE} IMC Policy MCP Server SSE Mode Configuration${NC}"
+    echo -e "${BLUE}${TEST_TUBE} SSE Transport Mode${NC}"
     echo -e "${YELLOW}Web-based transport on http://localhost:8080${NC}"
     echo -e "${YELLOW}SSE endpoint: http://localhost:8080/mcp/message${NC}"
-    echo -e "${YELLOW}Using H2 test database with sample insurance data${NC}"
     
     if [ "$TEST_TOOLS" = true ]; then
         echo -e "${CYAN}${TOOLS} Testing tools in SSE mode...${NC}"

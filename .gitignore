@@ -39,6 +39,9 @@ combined_prompt.md
 application-local.properties
 application-dev.properties
 
+# Environment setup scripts with API keys
+setup-env.sh
+
 # Temporary files
 *.tmp
 *.temp

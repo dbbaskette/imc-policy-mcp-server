@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# IMC Policy MCP Server - Environment Variables Template
+# Copy this file to setup-env.sh and add your actual API keys
+
+# OpenAI Configuration (for cloud profile and local fallback)
+export OPENAI_API_KEY="your-openai-api-key-here"
+
+# Optional: Additional model configuration
+# export OPENAI_CHAT_MODEL="gpt-4o-mini"
+# export OPENAI_EMBEDDING_MODEL="text-embedding-3-small"
+
+# Ollama Configuration (for local profile)
+export OLLAMA_BASE_URL="http://localhost:11434"
+export OLLAMA_CHAT_MODEL="llama3.2:3b"
+export OLLAMA_EMBEDDING_MODEL="nomic-embed-text:latest"
+
+# Vector Database Configuration (if using external PostgreSQL)
+# export PGVECTOR_HOST="localhost"
+# export PGVECTOR_PORT="5432"
+# export PGVECTOR_DATABASE="policy_rag"
+# export PGVECTOR_USERNAME="your-db-username"
+# export PGVECTOR_PASSWORD="your-db-password"
+
+echo "✅ Environment variables set for IMC Policy MCP Server"
+echo "🔑 OpenAI API Key: ${OPENAI_API_KEY:0:10}..." 
+echo "🤖 Ollama URL: $OLLAMA_BASE_URL"
+echo ""
+echo "Usage:"
+echo "  source setup-env.sh"
+echo "  ./test-mcp.sh --local"
+echo "  ./test-mcp.sh --cloud"

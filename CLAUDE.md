@@ -125,11 +125,11 @@ mvn test
 
 **Manual Execution**:
 ```bash
-# SSE Mode with H2 test database
-java -Dspring.profiles.active=sse-test -jar target/imc-accident-mcp-server-0.0.1-SNAPSHOT.jar
+# SSE Mode with PostgreSQL test database
+java -Dspring.profiles.active=local-sse -jar target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar
 
-# STDIO Mode with H2 test database
-java -Dspring.profiles.active=stdio-test -jar target/imc-accident-mcp-server-0.0.1-SNAPSHOT.jar
+# STDIO Mode with PostgreSQL test database
+java -Dspring.profiles.active=local-stdio -jar target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar
 
 # Production modes (requires PostgreSQL setup)
 java -Dspring.profiles.active=sse -jar target/imc-accident-mcp-server-0.0.1-SNAPSHOT.jar
@@ -177,12 +177,12 @@ The application supports dual transport modes:
   - `application.properties` - Base configuration with default SSE profile
   - `application-sse.properties` - SSE transport configuration (production)
   - `application-stdio.properties` - STDIO transport configuration (production)
-  - `application-sse-test.properties` - SSE transport with H2 test database
-  - `application-stdio-test.properties` - STDIO transport with H2 test database
+  - `application-local-sse.properties` - Local development with SSE transport and PostgreSQL
+  - `application-local-stdio.properties` - Local development with STDIO transport and PostgreSQL
 - **Key Properties**:
-  - `spring.profiles.active` - Profile selection (sse/stdio/sse-test/stdio-test)
+  - `spring.profiles.active` - Profile selection (sse/stdio/local-sse/local-stdio)
   - `spring.ai.mcp.server.stdio` - Transport mode toggle
-  - Database configuration - H2 for testing, PostgreSQL for production
+  - Database configuration - PostgreSQL with Testcontainers for local development, PostgreSQL for production
   - JPA settings - Schema initialization and SQL logging for test profiles
   - Logging configuration - Critical for STDIO transport functionality
 
