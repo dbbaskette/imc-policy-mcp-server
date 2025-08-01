@@ -9,14 +9,60 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Service for querying the vector store with customer filtering.
- * Note: Document population is handled by external systems.
+ * 📊 Vector Store Service for Insurance MegaCorp RAG Pipeline
+ * 
+ * <p>This service provides semantic search capabilities over insurance policy documents
+ * using PostgreSQL with PGVector extension. It enables retrieval-augmented generation (RAG)
+ * by finding the most relevant document chunks based on vector similarity.</p>
+ * 
+ * <h3>Core Capabilities:</h3>
+ * <ul>
+ *   <li>🔍 Semantic document search using vector similarity</li>
+ *   <li>👤 Customer-filtered document retrieval</li>
+ *   <li>📄 Multi-document relevance ranking</li>
+ *   <li>⚙️ Configurable similarity thresholds and result limits</li>
+ * </ul>
+ * 
+ * <h3>Vector Database Configuration:</h3>
+ * <ul>
+ *   <li><strong>Database</strong>: PostgreSQL with PGVector extension</li>
+ *   <li><strong>Dimensions</strong>: 768 (matches nomic-embed-text model)</li>
+ *   <li><strong>Similarity Metric</strong>: Cosine similarity</li>
+ *   <li><strong>Table</strong>: vector_store (auto-created by Spring AI)</li>
+ * </ul>
+ * 
+ * <h3>Document Lifecycle:</h3>
+ * <p><strong>Note:</strong> This service is read-only. Document population and indexing
+ * are handled by external ETL processes that load policy documents, chunk them into
+ * manageable pieces, generate embeddings, and store them in the vector database.</p>
+ * 
+ * <h3>Integration with RAG Pipeline:</h3>
+ * <ol>
+ *   <li>User query embedded by {@link EmbeddingService}</li>
+ *   <li>Vector similarity search performed by this service</li>
+ *   <li>Retrieved documents passed to {@link LLMService} for answer generation</li>
+ * </ol>
+ * 
+ * @author Insurance MegaCorp Development Team
+ * @version 1.0.0
+ * @since Spring AI 1.0.0
+ * @see org.springframework.ai.vectorstore.VectorStore
+ * @see com.baskettecase.mcpserver.service.EmbeddingService
+ * @see com.baskettecase.mcpserver.service.LLMService
  */
 @Service
 public class VectorStoreService {
 
+    /**
+     * The underlying vector store (PostgreSQL + PGVector)
+     */
     private final VectorStore vectorStore;
 
+    /**
+     * Constructs a new VectorStoreService with the specified vector store.
+     * 
+     * @param vectorStore the PGVector store instance (auto-configured by Spring AI)
+     */
     @Autowired
     public VectorStoreService(VectorStore vectorStore) {
         this.vectorStore = vectorStore;

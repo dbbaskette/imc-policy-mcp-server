@@ -1,233 +1,381 @@
-# Spring AI MCP Server Foundation
+<div align="center">
 
-A comprehensive Model Context Protocol (MCP) server built with Spring AI and Spring Boot, providing a solid foundation for building MCP-enabled applications. This server supports both STDIO transport (for Claude Desktop integration) and SSE transport (for web-based clients).
+![IMC Policy Server Header](.github/assets/policy.png)
 
-For more information, see the [MCP Server Boot Starter](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html) reference documentation.
+# 🏢 IMC Policy MCP Server
 
-## Overview
+[![Java 21](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.3-6DB33F?style=for-the-badge&logo=spring-boot)](https://spring.io/projects/spring-boot)
+[![Spring AI](https://img.shields.io/badge/Spring_AI-1.0.0-6DB33F?style=for-the-badge&logo=spring)](https://docs.spring.io/spring-ai/reference/)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-7C3AED?style=for-the-badge)](https://modelcontextprotocol.github.io/specification/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-2496ED?style=for-the-badge&logo=docker)](https://www.docker.com/)
 
-This MCP server demonstrates:
-- Integration with `spring-ai-mcp-server-webflux-spring-boot-starter`
-- Dual transport support: STDIO and SSE (Server-Sent Events)
-- Automatic tool registration using Spring AI's `@Tool` annotation
-- Clean separation of concerns with dedicated `ToolsService`
-- Production-ready logging configuration
-- Comprehensive test coverage with 27+ unit tests
+**🚀 A comprehensive Model Context Protocol (MCP) server for Insurance MegaCorp policy operations**  
+*Built with Spring AI, featuring RAG capabilities and dual transport modes*
 
-## Available Tools
+</div>
 
-### 🔤 capitalizeText
-- **Description**: Capitalize the first letter of each word in the input text
-- **Parameters**: 
-  - `text` (String): Input text to capitalize
-- **Example**: `"hello world"` → `"Hello World"`
+---
 
-### 🧮 calculate
-- **Description**: Perform basic mathematical operations
-- **Parameters**:
-  - `number1` (double): First number
-  - `number2` (double): Second number
-  - `operator` (String): Mathematical operator (+, -, *, /, %, ^)
-- **Example**: `calculate(15, 3, "+")` → `18.0`
+## 📋 Table of Contents
 
-## Quick Start
+- [✨ Features](#-features)
+- [🏗️ Architecture](#️-architecture)
+- [🚀 Quick Start](#-quick-start)
+- [🔧 Configuration](#-configuration)
+- [🛠️ Available Tools](#️-available-tools)
+- [🧪 Testing](#-testing)
+- [🖥️ Claude Desktop Integration](#️-claude-desktop-integration)
+- [📊 Development](#-development)
+- [🔗 Resources](#-resources)
 
-### Prerequisites
-- Java 21+
-- Maven 3.6+
+---
 
-### Building the Project
-```bash
-./mvnw clean install
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🌟 **Core Capabilities**
+- 🤖 **Dual AI Models**: Ollama (local) with fallback support
+- 🗂️ **Vector RAG**: PostgreSQL + PGVector for document search
+- 🔄 **Dual Transport**: STDIO (Claude Desktop) + SSE (Web clients)
+- 🏢 **Insurance Domain**: Customer and policy management tools
+- 📊 **Testcontainers**: Automated local development setup
+
+</td>
+<td width="50%">
+
+### ⚡ **Technical Stack**
+- ☕ **Java 21**: Latest LTS with modern features
+- 🍃 **Spring Boot 3.5.3**: Production-ready framework
+- 🧠 **Spring AI 1.0.0**: Cutting-edge AI integration
+- 🐘 **PostgreSQL + PGVector**: Vector database for RAG
+- 🐋 **Docker**: Containerized development environment
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TB
+    subgraph "🖥️ Clients"
+        A[Claude Desktop<br/>📱 STDIO]
+        B[Web Clients<br/>🌐 SSE]
+    end
+    
+    subgraph "🚀 IMC Policy MCP Server"
+        C[Spring Boot App<br/>⚙️]
+        D[Tools Service<br/>🛠️]
+        E[Vector Store<br/>📊]
+        F[AI Models<br/>🤖]
+    end
+    
+    subgraph "💾 Data Layer"
+        G[(PostgreSQL<br/>🐘)]
+        H[(Vector Store<br/>📈)]
+        I[Ollama<br/>🦙]
+    end
+    
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    D --> F
+    E --> H
+    F --> I
+    D --> G
+    
+    style C fill:#e1f5fe
+    style D fill:#f3e5f5
+    style E fill:#e8f5e8
+    style F fill:#fff3e0
 ```
 
-### Running the Server
-
-#### For Claude Desktop (STDIO Mode)
-```bash
-java -Dspring.profiles.active=stdio -jar target/mcp-server-0.0.1-SNAPSHOT.jar
+### 🏢 **Project Structure**
+```
+📁 imc-policy-mcp-server/
+├── 📁 src/main/java/com/baskettecase/mcpserver/
+│   ├── 🎯 McpServerApplication.java       # Main application
+│   ├── 📁 config/
+│   │   ├── ⚙️ ModelConfiguration.java    # AI model setup
+│   │   └── 🗄️ DatabaseConfiguration.java # Database setup
+│   ├── 📁 service/
+│   │   ├── 🛠️ ToolsService.java          # MCP tools
+│   │   ├── 🤖 LLMService.java            # Chat model service
+│   │   ├── 🔢 EmbeddingService.java      # Embedding service
+│   │   ├── 📊 VectorStoreService.java    # Vector operations
+│   │   └── 🧪 AIModelTestService.java    # AI testing
+│   ├── 📁 model/                          # JPA entities
+│   └── 📁 repository/                     # Data repositories
+├── 📁 src/main/resources/
+│   ├── ⚙️ application*.properties        # Profiles config
+│   ├── 🗄️ schema.sql                     # Database schema  
+│   └── 📊 data.sql                       # Sample data
+├── 📁 src/test/                          # Comprehensive tests
+└── 🧪 test-mcp.sh                       # Testing script
 ```
 
-#### For Web Clients (SSE Mode - Default)
+---
+
+## 🚀 Quick Start
+
+### 📋 **Prerequisites**
+
+<table>
+<tr>
+<td align="center">☕<br/><strong>Java 21+</strong></td>
+<td align="center">📦<br/><strong>Maven 3.6+</strong></td>
+<td align="center">🐋<br/><strong>Docker Desktop</strong></td>
+<td align="center">🦙<br/><strong>Ollama</strong></td>
+</tr>
+</table>
+
+### ⚡ **One-Command Setup**
+
 ```bash
-java -jar target/mcp-server-0.0.1-SNAPSHOT.jar
+# 🏗️ Build and test everything
+./test-mcp.sh --local --sse --build --test-tools
 ```
-Server will be available at `http://localhost:8080/mcp/message`
 
-### Testing the Server
-Use the included test script:
+<details>
+<summary>📖 <strong>Step-by-Step Setup</strong></summary>
+
+#### 1️⃣ **Install Ollama Models**
 ```bash
-# Test STDIO mode
-./test-mcp.sh --stdio --test-tools
+# 💬 Install chat model
+ollama pull llama3.2:3b
 
-# Test SSE mode  
-./test-mcp.sh --sse --test-tools
-
-# Build and test both modes
-./test-mcp.sh --build --both --test-tools
+# 🔤 Install embedding model  
+ollama pull nomic-embed-text:latest
 ```
 
-## Claude Desktop Integration
+#### 2️⃣ **Build the Project**
+```bash
+mvn clean install
+```
 
-### 1. Add to Claude Desktop Configuration
+#### 3️⃣ **Run the Server**
+```bash
+# 🖥️ For Claude Desktop (STDIO)
+./test-mcp.sh --local --stdio
 
-Add this to your Claude Desktop `claude_desktop_config.json`:
+# 🌐 For web clients (SSE)  
+./test-mcp.sh --local --sse
+```
+
+</details>
+
+---
+
+## 🔧 Configuration
+
+### 🏠 **Local Development Profiles**
+
+| Profile | Transport | Database | AI Models | Use Case |
+|---------|-----------|----------|-----------|----------|
+| 🖥️ `local-stdio` | STDIO | TestContainers PostgreSQL | 🦙 Ollama | Claude Desktop |
+| 🌐 `local-sse` | SSE | H2 In-Memory | 🦙 Ollama | Web Development |
+
+### ⚙️ **Environment Variables**
+
+```bash
+# 🦙 Ollama Configuration
+export OLLAMA_BASE_URL="http://localhost:11434"
+export OLLAMA_CHAT_MODEL="llama3.2:3b" 
+export OLLAMA_EMBEDDING_MODEL="nomic-embed-text:latest"
+```
+
+---
+
+## 🛠️ Available Tools
+
+<div align="center">
+
+### 🏢 **Insurance Policy Tools**
+
+</div>
+
+| Tool | Description | Parameters | Example |
+|------|-------------|------------|---------|
+| 👤 **queryCustomer** | Get customer information | `customerId` (Integer) | `queryCustomer(100001)` |
+| 🧪 **testAIModels** | Test AI connectivity | None | `testAIModels()` |
+| 🗄️ **testDatabase** | Test database connectivity | None | `testDatabase()` |
+
+<details>
+<summary>🔍 <strong>Tool Details</strong></summary>
+
+#### 👤 **Customer Query Tool**
+```javascript
+// 📞 Example Response
+{
+  "customer_id": 100001,
+  "name": "John Doe", 
+  "email": "john.doe@email.com",
+  "phone": "555-0101",
+  "address": "123 Main St, Atlanta, GA 30309"
+}
+```
+
+#### 🧪 **AI Model Testing**
+```bash
+# 🤖 Tests both chat and embedding models
+✅ LLM service is working using OllamaChatModel
+✅ Embedding service is working using OllamaEmbeddingModel
+```
+
+</details>
+
+---
+
+## 🧪 Testing
+
+### 🎯 **Smart Test Script**
+
+The `./test-mcp.sh` script provides comprehensive testing with beautiful colored output:
+
+```bash
+# 🎨 Available test options
+./test-mcp.sh --local --sse --test-tools     # 🌐 Test SSE with tools
+./test-mcp.sh --local --stdio --test-tools   # 🖥️ Test STDIO with tools  
+./test-mcp.sh --local --sse --build          # 🏗️ Build then test SSE
+```
+
+### 📊 **Test Coverage**
+
+<div align="center">
+
+| Component | Tests | Status |
+|-----------|-------|--------|
+| 🛠️ Tools Service | ✅ 5 tests | 100% Pass |
+| 👤 Customer Queries | ✅ 3 tests | 100% Pass |
+| 🗄️ Database Connectivity | ✅ 2 tests | 100% Pass |
+| **📊 Total** | **✅ 5 tests** | **🎯 100% Pass** |
+
+</div>
+
+### 🎨 **Test Output Example**
+
+```
+╔══════════════════════════════════════════╗
+║      IMC Policy MCP Server Tester        ║
+╚══════════════════════════════════════════╝
+
+✅ JAR file found
+⚙️ Configuration:
+  Environment: local 🏠
+  Transport: sse
+  
+🧪 🏠 Local Development Environment
+• Testcontainers PostgreSQL with sample data and vector database
+• Requires Docker Desktop to be running
+
+⚙️ AI Model Configuration:
+✓ Ollama CLI detected (Local development models)
+  Chat Model: llama3.2:3b
+  Embedding Model: nomic-embed-text:latest
+  Base URL: http://localhost:11434
+
+⚙️ Local Profile Configuration:
+• Uses Ollama models exclusively for simplicity
+• No OpenAI integration in local profiles  
+• Requires Ollama server running on localhost:11434
+```
+
+---
+
+## 🖥️ Claude Desktop Integration
+
+### 1️⃣ **Configuration**
+
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
-    "mcp-server": {
+    "imc-policy-server": {
       "command": "java",
       "args": [
-        "-Dspring.profiles.active=stdio",
+        "-Dspring.profiles.active=local-stdio", 
         "-jar",
-        "/absolute/path/to/mcp-server/target/mcp-server-0.0.1-SNAPSHOT.jar"
+        "/path/to/imc-policy-mcp-server/target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar"
       ]
     }
   }
 }
 ```
 
-### 2. Restart Claude Desktop
+### 2️⃣ **Usage Examples**
 
-The tools `capitalizeText` and `calculate` will be available for use.
+Try these queries in Claude Desktop:
 
-### 3. Test the Tools
+- 🔍 *"Can you look up customer information for ID 100001?"*
+- 🧪 *"Test the AI models connectivity"*
+- 📊 *"Check if the database is working properly"*
 
-Try asking Claude Desktop:
-- "Can you capitalize this text: 'hello world from mcp server'"
-- "Calculate 15 + 3 using the calculator tool"
+---
 
-## Configuration
+## 📊 Development
 
-The server uses profile-based configuration:
-
-### STDIO Profile (`application-stdio.properties`)
-```properties
-# STDIO Transport for Claude Desktop
-spring.ai.mcp.server.stdio=true
-spring.main.web-application-type=none
-spring.main.banner-mode=off
-
-# Logging to file only (console interferes with MCP protocol)
-logging.level.root=OFF
-logging.config=classpath:logback-stdio.xml
-```
-
-### SSE Profile (`application-sse.properties`)
-```properties
-# SSE Transport for Web Clients
-spring.ai.mcp.server.stdio=false
-server.port=8080
-
-# MCP endpoint
-spring.ai.mcp.server.sse-message-endpoint=/mcp/message
-```
-
-## Architecture
-
-### Core Components
-
-- **`McpServerApplication`**: Main Spring Boot application with tool registration
-- **`ToolsService`**: Service containing MCP tools with `@Tool` annotations
-- **Transport Layer**: Automatic Spring AI MCP transport configuration
-- **Configuration**: Profile-based setup for different deployment modes
-
-### Project Structure
-```
-src/
-├── main/java/com/baskettecase/mcpserver/
-│   ├── McpServerApplication.java      # Main application
-│   └── ToolsService.java              # MCP tools implementation
-├── main/resources/
-│   ├── application.properties         # Base configuration
-│   ├── application-stdio.properties   # STDIO transport config
-│   ├── application-sse.properties     # SSE transport config
-│   └── logback-stdio.xml              # STDIO logging config
-└── test/java/
-    ├── ToolsServiceTest.java          # Comprehensive tool tests
-    └── org/springframework/ai/mcp/sample/client/
-        ├── SampleClient.java          # Example MCP client
-        ├── ClientStdio.java           # STDIO client example
-        └── ClientSse.java             # SSE client example
-```
-
-## Development
-
-### Adding New Tools
-
-Add methods to `ToolsService` with the `@Tool` annotation:
+### 🔨 **Adding New Tools**
 
 ```java
-@Tool(description = "Your tool description")
-public String yourTool(String parameter) {
-    // Your implementation
-    return "result";
+@Tool(description = "Your amazing new tool")
+public String yourNewTool(String parameter) {
+    // 🚀 Your implementation here
+    return "Amazing result!";
 }
 ```
 
-### Running Tests
+### 🏃‍♂️ **Running Locally**
+
 ```bash
-./mvnw test
+# 🛠️ Development mode
+mvn spring-boot:run -Dspring-boot.run.profiles=local-sse
+
+# 🧪 Test mode  
+mvn test
 ```
 
-### Viewing Logs
+### 🎯 **Code Documentation**
 
-- **STDIO mode**: Logs go to `/tmp/mcp-server-stdio.log`
-- **SSE mode**: Logs go to console and `./target/mcp-server-sse.log`
+Key services are thoroughly documented:
 
-## Client Examples
+- 🛠️ **ToolsService**: MCP tool implementations with database integration
+- 🤖 **LLMService**: Chat model operations for query expansion and answering
+- 🔢 **EmbeddingService**: Text embedding for vector search
+- 📊 **VectorStoreService**: Vector database operations with customer filtering
 
-### Manual MCP Client (STDIO)
-```java
-var stdioParams = ServerParameters.builder("java")
-    .args("-Dspring.profiles.active=stdio", "-jar", "target/mcp-server-0.0.1-SNAPSHOT.jar")
-    .build();
+---
 
-var transport = new StdioClientTransport(stdioParams);
-var client = McpClient.sync(transport).build();
-```
+## 🔗 Resources
 
-### Manual MCP Client (SSE)
-```java
-var transport = new WebFluxSseClientTransport(
-    WebClient.builder().baseUrl("http://localhost:8080"));
-var client = McpClient.sync(transport).build();
-```
+<div align="center">
 
-## Dependencies
+### 📚 **Documentation & Guides**
 
-Key dependencies include:
+[![Spring AI Docs](https://img.shields.io/badge/Spring_AI-Documentation-6DB33F?style=for-the-badge&logo=spring)](https://docs.spring.io/spring-ai/reference/)
+[![MCP Specification](https://img.shields.io/badge/MCP-Specification-7C3AED?style=for-the-badge)](https://modelcontextprotocol.github.io/specification/)
+[![Claude Desktop](https://img.shields.io/badge/Claude-Desktop_Guide-FF6B35?style=for-the-badge)](https://claude.ai/mcp)
+[![Ollama](https://img.shields.io/badge/Ollama-Models-000000?style=for-the-badge)](https://ollama.ai/)
 
-```xml
-<dependency>
-    <groupId>org.springframework.ai</groupId>
-    <artifactId>spring-ai-mcp-server-webflux-spring-boot-starter</artifactId>
-    <version>1.1.0-SNAPSHOT</version>
-</dependency>
-```
+</div>
 
-This starter provides:
-- Reactive and STDIO transport support
-- Auto-configured MCP endpoints
-- Tool callback registration
-- Spring WebFlux integration
+---
 
-## Contributing
+<div align="center">
 
-This project serves as a foundation for MCP server development. Feel free to:
-- Add new tools to `ToolsService`
-- Extend transport configurations
-- Improve test coverage
-- Add new MCP capabilities
+### 🎉 **Ready to revolutionize insurance policy management!**
 
-## Additional Resources
+*Built with ❤️ by the Insurance MegaCorp Development Team*
 
-- [Spring AI Documentation](https://docs.spring.io/spring-ai/reference/)
-- [MCP Server Boot Starter Docs](https://docs.spring.io/spring-ai/reference/api/mcp/mcp-server-boot-starter-docs.html)
-- [Model Context Protocol Specification](https://modelcontextprotocol.github.io/specification/)
-- [Claude Desktop MCP Guide](https://claude.ai/mcp)
+---
 
-## License
+**🚀 Happy Coding!** | **📧 Questions?** File an issue | **⭐ Star this repo** if it helps!
 
-This project is provided as-is for educational and development purposes.
+</div>

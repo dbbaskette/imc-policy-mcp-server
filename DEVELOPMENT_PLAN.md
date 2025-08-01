@@ -69,17 +69,17 @@ The current codebase is an insurance accident MCP server that needs to be transf
 *Reference: https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html, https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html*
 
 #### Issue 7: Configure Chat Models  
-- [ ] **Cloud Profile**: Configure OpenAI ChatModel bean
-- [ ] **Local Profile**: Configure Ollama ChatModel bean with fallback to OpenAI
-- [ ] Add model configuration properties for each profile
-- [ ] Create `LLMService.java` for query expansion and answer generation
+- ✅ **Cloud Profile**: Configure OpenAI ChatModel bean
+- ✅ **Local Profile**: Configure Ollama ChatModel bean
+- ✅ Add model configuration properties for each profile
+- ✅ Create `LLMService.java` for query expansion and answer generation
 
 #### Issue 8: Configure Embedding Models
 *Reference: https://docs.spring.io/spring-ai/reference/api/embeddings/openai-embeddings.html, https://docs.spring.io/spring-ai/reference/api/embeddings/nomic-embed.html*
-- [ ] **Cloud Profile**: Configure OpenAI EmbeddingModel bean  
-- [ ] **Local Profile**: Configure nomic-embed EmbeddingModel via Ollama
-- [ ] Add embedding configuration properties
-- [ ] Create `EmbeddingService.java` for text-to-vector conversion
+- ✅ **Cloud Profile**: Configure OpenAI EmbeddingModel bean  
+- ✅ **Local Profile**: Configure nomic-embed EmbeddingModel via Ollama
+- ✅ Add embedding configuration properties
+- ✅ Create `EmbeddingService.java` for text-to-vector conversion
 
 ### Phase 4: RAG Pipeline Implementation
 **Goal:** Implement complete RAG workflow  

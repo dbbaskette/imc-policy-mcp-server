@@ -71,4 +71,42 @@ class ToolsServiceTest {
         assertEquals("Error: Customer ID cannot be null", result);
     }
 
+    @DisplayName("Database Connectivity Tests")
+    @Test
+    void testDatabase_withCustomers() {
+        // Given
+        List<Customer> mockCustomers = Arrays.asList(
+            new Customer(100001, "John", "Doe", "john.doe@email.com", "555-0101", "123 Main St", "Atlanta", "GA", "30309"),
+            new Customer(100002, "Jane", "Smith", "jane.smith@email.com", "555-0102", "456 Oak Ave", "Nashville", "TN", "37203")
+        );
+        when(customerRepository.count()).thenReturn(2L);
+        when(customerRepository.findAll()).thenReturn(mockCustomers);
+
+        // When
+        String result = toolsService.testDatabase();
+
+        // Then
+        assertTrue(result.contains("Database connection successful"));
+        assertTrue(result.contains("Total customers in database: 2"));
+        assertTrue(result.contains("Customer ID: 100001"));
+        assertTrue(result.contains("Name: John Doe"));
+        assertTrue(result.contains("Customer ID: 100002"));
+        assertTrue(result.contains("Name: Jane Smith"));
+        assertTrue(result.contains("Database test completed successfully"));
+    }
+
+    @Test
+    void testDatabase_noCustomers() {
+        // Given
+        when(customerRepository.count()).thenReturn(0L);
+
+        // When
+        String result = toolsService.testDatabase();
+
+        // Then
+        assertTrue(result.contains("Database connection successful"));
+        assertTrue(result.contains("Total customers in database: 0"));
+        assertTrue(result.contains("Database test completed successfully"));
+    }
+
 }

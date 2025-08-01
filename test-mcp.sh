@@ -347,35 +347,23 @@ if [ "$ENVIRONMENT" = "local" ]; then
     
     echo -e "${BLUE}${GEAR} AI Model Configuration:${NC}"
     
-    # Check for OpenAI API key
-    if [ -n "${OPENAI_API_KEY:-}" ] && [ "${OPENAI_API_KEY}" != "" ]; then
-        echo -e "${GREEN}✓ OpenAI API Key detected${NC} (Primary models)"
-        echo -e "  ${CYAN}Chat Model: ${OPENAI_CHAT_MODEL:-gpt-4o-mini}${NC}"
-        echo -e "  ${CYAN}Embedding Model: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}${NC}"
-    else
-        echo -e "${YELLOW}⚠ OpenAI API Key not found${NC}"
-    fi
-    
-    # Check for Ollama
+    # Check for Ollama (only model supported in local profiles)
     if command -v ollama >/dev/null 2>&1; then
-        echo -e "${GREEN}✓ Ollama CLI detected${NC} (Fallback models)"
+        echo -e "${GREEN}✓ Ollama CLI detected${NC} (Local development models)"
         echo -e "  ${CYAN}Chat Model: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}${NC}"
         echo -e "  ${CYAN}Embedding Model: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}${NC}"
         echo -e "  ${CYAN}Base URL: ${OLLAMA_BASE_URL:-http://localhost:11434}${NC}"
     else
-        echo -e "${YELLOW}⚠ Ollama CLI not found${NC}"
+        echo -e "${RED}✗ Ollama CLI not found${NC}"
+        echo -e "${YELLOW}  Please install Ollama for local development${NC}"
     fi
     
-    # Model priority explanation
+    # Model configuration explanation
     echo ""
-    echo -e "${BLUE}${GEAR} Model Selection Priority:${NC}"
-    if [ -n "${OPENAI_API_KEY:-}" ] && [ "${OPENAI_API_KEY}" != "" ]; then
-        echo -e "${GREEN}1. OpenAI models (API key available)${NC}"
-        echo -e "${YELLOW}2. Ollama models (fallback)${NC}"
-    else
-        echo -e "${YELLOW}1. Ollama models (primary - no OpenAI API key)${NC}"
-        echo -e "${RED}2. OpenAI models (unavailable - no API key)${NC}"
-    fi
+    echo -e "${BLUE}${GEAR} Local Profile Configuration:${NC}"
+    echo -e "${CYAN}• Uses Ollama models exclusively for simplicity${NC}"
+    echo -e "${CYAN}• No OpenAI integration in local profiles${NC}"
+    echo -e "${CYAN}• Requires Ollama server running on localhost:11434${NC}"
 fi
 
 # Transport-specific configuration and execution

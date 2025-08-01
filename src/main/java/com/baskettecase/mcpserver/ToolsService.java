@@ -8,11 +8,42 @@ import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
+/**
+ * 🛠️ MCP Tools Service for Insurance MegaCorp
+ * 
+ * <p>This service provides Model Context Protocol (MCP) tools for insurance policy operations.
+ * All methods annotated with {@code @Tool} are automatically registered as MCP tools and become
+ * available to MCP clients like Claude Desktop.</p>
+ * 
+ * <h3>Available Tools:</h3>
+ * <ul>
+ *   <li>👤 {@link #queryCustomer(Integer)} - Retrieve customer information by ID</li>
+ *   <li>🗄️ {@link #testDatabase()} - Test database connectivity and show sample data</li>
+ * </ul>
+ * 
+ * <h3>Architecture:</h3>
+ * <p>This service is designed to be stateless and uses Spring Data JPA repositories for
+ * database access. It integrates seamlessly with Spring AI's MCP server auto-configuration.</p>
+ * 
+ * @author Insurance MegaCorp Development Team
+ * @version 1.0.0
+ * @since Spring AI 1.0.0
+ * @see org.springframework.ai.tool.annotation.Tool
+ * @see com.baskettecase.mcpserver.repository.CustomerRepository
+ */
 @Service
 public class ToolsService {
 
+	/**
+	 * Repository for customer data access operations
+	 */
 	private final CustomerRepository customerRepository;
 
+	/**
+	 * Constructs a new ToolsService with the specified customer repository.
+	 * 
+	 * @param customerRepository the repository for customer data operations
+	 */
 	@Autowired
 	public ToolsService(CustomerRepository customerRepository) {
 		this.customerRepository = customerRepository;

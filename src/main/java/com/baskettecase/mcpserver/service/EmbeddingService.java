@@ -6,17 +6,52 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * Service for text embedding operations
- * Uses Ollama for local profiles, OpenAI for cloud profiles
+ * 🔢 Text Embedding Service for Insurance MegaCorp
+ * 
+ * <p>This service handles text-to-vector conversion for the insurance policy RAG system.
+ * It transforms natural language queries and documents into high-dimensional vectors
+ * that can be used for semantic similarity search in the vector database.</p>
+ * 
+ * <h3>Core Capabilities:</h3>
+ * <ul>
+ *   <li>🔤 Text to vector embedding conversion</li>
+ *   <li>📊 High-dimensional vector generation (768 dimensions)</li>
+ *   <li>🧪 Embedding model connectivity testing</li>
+ * </ul>
+ * 
+ * <h3>Model Configuration:</h3>
+ * <p>Uses Ollama's nomic-embed-text:latest model for local development. This model
+ * generates 768-dimensional vectors optimized for semantic text similarity.</p>
+ * 
+ * <h3>Integration with RAG Pipeline:</h3>
+ * <p>User queries are embedded using this service, then compared against document
+ * embeddings stored in the PostgreSQL+PGVector database to find the most relevant
+ * insurance policy information.</p>
+ * 
+ * @author Insurance MegaCorp Development Team
+ * @version 1.0.0
+ * @since Spring AI 1.0.0
+ * @see org.springframework.ai.embedding.EmbeddingModel
+ * @see com.baskettecase.mcpserver.service.VectorStoreService
  */
 @Service
 public class EmbeddingService {
 
+    /**
+     * The underlying embedding model (Ollama nomic-embed-text:latest for local development)
+     */
     private final EmbeddingModel embeddingModel;
 
+    /**
+     * Constructs a new EmbeddingService with the specified embedding model.
+     * 
+     * @param embeddingModel the Ollama embedding model instance
+     */
     @Autowired
     public EmbeddingService(@Qualifier("ollamaEmbeddingModel") EmbeddingModel embeddingModel) {
         this.embeddingModel = embeddingModel;
@@ -25,39 +60,19 @@ public class EmbeddingService {
     /**
      * Convert text to embedding vector
      * @param text The text to embed
-     * @return Embedding vector as list of floats
+     * @return A list of doubles representing the embedding vector
      */
     public List<Double> embedText(String text) {
         if (text == null || text.trim().isEmpty()) {
-            throw new IllegalArgumentException("Text cannot be null or empty");
+            throw new IllegalArgumentException("Text to embed cannot be null or empty");
         }
-
-        EmbeddingResponse response = embeddingModel.embedForResponse(List.of(text));
-        float[] embedding = response.getResults().get(0).getOutput();
-        
-        // Convert float[] to List<Double>
+        EmbeddingResponse response = this.embeddingModel.embedForResponse(List.of(text));
+        float[] embedding = response.getResult().getOutput();
         List<Double> result = new java.util.ArrayList<>();
         for (float f : embedding) {
             result.add((double) f);
         }
         return result;
-    }
-
-    /**
-     * Get the embedding dimension size
-     * @return The dimension size of embeddings produced by this model
-     */
-    public int getEmbeddingDimensions() {
-        // Test with a simple string to get dimensions
-        try {
-            List<Double> testEmbedding = embedText("test");
-            return testEmbedding.size();
-        } catch (Exception e) {
-            // Default dimensions based on common models
-            // OpenAI text-embedding-3-small: 1536
-            // nomic-embed-text: 768
-            return 768; // Conservative default
-        }
     }
 
     /**
