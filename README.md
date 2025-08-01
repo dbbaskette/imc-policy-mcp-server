@@ -44,6 +44,7 @@
 - 🔄 **Dual Transport**: STDIO (Claude Desktop) + SSE (Web clients)
 - 🏢 **Insurance Domain**: Customer and policy management tools
 - 📊 **Testcontainers**: Automated local development setup
+- ☁️ **Cloud Ready**: Cloud Foundry deployment with health monitoring
 
 </td>
 <td width="50%">
@@ -54,6 +55,8 @@
 - 🧠 **Spring AI 1.0.0**: Cutting-edge AI integration
 - 🐘 **PostgreSQL + PGVector**: Vector database for RAG
 - 🐋 **Docker**: Containerized development environment
+- 📊 **Spring Actuator**: Health checks and monitoring
+- ☁️ **Cloud Foundry**: Enterprise deployment platform
 
 </td>
 </tr>
@@ -119,7 +122,11 @@ graph TB
 │   ├── 🗄️ schema.sql                     # Database schema  
 │   └── 📊 data.sql                       # Sample data
 ├── 📁 src/test/                          # Comprehensive tests
-└── 🧪 test-mcp.sh                       # Testing script
+├── 📁 scripts/
+│   └── 🔧 create-cf-services.sh          # Cloud Foundry setup
+├── 🧪 test-mcp.sh                       # Testing script
+├── ☁️ manifest.yml.template              # CF deployment template
+└── 📖 cloud-foundry-deployment.md        # Deployment guide
 ```
 
 ---
@@ -264,6 +271,7 @@ export PGVECTOR_PASSWORD="password"
 | 👤 **queryCustomer** | Get customer information | `customerId` (Integer) | `queryCustomer(100001)` |
 | 🧪 **testAIModels** | Test AI connectivity | None | `testAIModels()` |
 | 🗄️ **testDatabase** | Test database connectivity | None | `testDatabase()` |
+| 📊 **Health Check** | Actuator health endpoint | None | `GET /actuator/health` |
 
 <details>
 <summary>🔍 <strong>Tool Details</strong></summary>
@@ -413,6 +421,25 @@ mvn spring-boot:run -Dspring-boot.run.profiles=local-sse
 # 🧪 Test mode  
 mvn test
 ```
+
+### ☁️ **Cloud Foundry Deployment**
+
+```bash
+# 🔧 Create required services
+./scripts/create-cf-services.sh
+
+# 📝 Copy and customize manifest
+cp manifest.yml.template manifest.yml
+# Edit manifest.yml with your CF domain
+
+# 🚀 Deploy to Cloud Foundry
+cf push
+
+# 📊 Check application health
+curl https://your-app.your-cf-domain.com/actuator/health
+```
+
+For detailed deployment instructions, see [`cloud-foundry-deployment.md`](./cloud-foundry-deployment.md).
 
 ### 🎯 **Code Documentation**
 
