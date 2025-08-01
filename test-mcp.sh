@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # IMC Policy MCP Server Test Script
-# Usage: ./test-mcp-new.sh --local [--sse|--stdio] [--build] [--test-tools] [--help]
+# Usage: ./test-mcp.sh --local [--sse|--stdio] [--ollama|--openai] [--build] [--test-tools] [--help]
 
 set -e
 
@@ -28,6 +28,7 @@ LOCAL="🏠"
 # Default values
 ENVIRONMENT=""
 TRANSPORT="sse"
+AI_MODEL="ollama"
 BUILD=false
 TEST_TOOLS=false
 JAR_FILE="target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar"
@@ -223,6 +224,30 @@ while [[ $# -gt 0 ]]; do
             TRANSPORT="stdio"
             shift
             ;;
+        --ollama)
+            AI_MODEL="ollama"
+            shift
+            ;;
+        --openai)
+            AI_MODEL="openai"
+            shift
+            ;;
+        --chat-openai)
+            AI_MODEL="chat-openai"
+            shift
+            ;;
+        --chat-ollama)
+            AI_MODEL="chat-ollama"
+            shift
+            ;;
+        --embed-openai)
+            AI_MODEL="${AI_MODEL},embed-openai"
+            shift
+            ;;
+        --embed-ollama)
+            AI_MODEL="${AI_MODEL},embed-ollama"
+            shift
+            ;;
         --build)
             BUILD=true
             shift
@@ -234,14 +259,26 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             echo -e "${CYAN}IMC Policy MCP Server Test Script${NC}"
             echo ""
-            echo "Usage: $0 [environment] [transport] [options]"
+            echo "Usage: $0 [environment] [transport] [ai-model] [options]"
             echo ""
             echo "Environment Options:"
-            echo "  --local       Use local development environment with Ollama + H2 database"
+            echo "  --local       Use local development environment with test database"
             echo ""
             echo "Transport Options:"
             echo "  --sse         Use SSE (Server-Sent Events) transport [default]"
             echo "  --stdio       Use STDIO transport (for Claude Desktop)"
+            echo ""
+            echo "AI Model Options:"
+            echo "  --chat-ollama                 Use Ollama for chat model"
+            echo "  --chat-openai                 Use OpenAI for chat model"
+            echo "  --embed-ollama                Use Ollama for embedding model"
+            echo "  --embed-openai                Use OpenAI for embedding model"
+            echo ""
+            echo "  Common Combinations:"
+            echo "  --chat-ollama --embed-ollama  Pure local setup"
+            echo "  --chat-openai --embed-openai  Pure API setup"
+            echo "  --chat-openai --embed-ollama  Reliable chat + working local embeddings (recommended)"
+            echo "  --chat-ollama --embed-openai  Local chat + reliable embeddings"
             echo ""
             echo "Other Options:"
             echo "  --build       Build the project before running"
@@ -249,10 +286,10 @@ while [[ $# -gt 0 ]]; do
             echo "  -h, --help    Show this help message"
             echo ""
             echo "Examples:"
-            echo "  $0 --local --sse               # Local environment with SSE transport"
-            echo "  $0 --local --stdio             # Local environment with STDIO transport (Claude Desktop)"
-            echo "  $0 --local --sse --build       # Build then run local SSE"
-            echo "  $0 --local --stdio --test-tools # Local STDIO with tool testing"
+            echo "  $0 --local --sse --chat-openai --embed-ollama  # Recommended setup"
+            echo "  $0 --local --stdio --chat-ollama --embed-ollama # Pure local setup"
+            echo "  $0 --local --sse --chat-openai --embed-openai   # Pure API setup"
+            echo "  $0 --local --stdio --chat-ollama --embed-openai # Mixed setup"
             echo ""
             echo "Environment Details:"
             echo "  ${LOCAL} Local:"
@@ -294,7 +331,7 @@ if [ -z "$ENVIRONMENT" ]; then
 fi
 
 # Set profile based on environment and transport
-PROFILE="${ENVIRONMENT}-${TRANSPORT}"
+PROFILE="${ENVIRONMENT}-${TRANSPORT},${AI_MODEL}"
 
 # Print header
 echo -e "${PURPLE}╔══════════════════════════════════════════╗${NC}"
@@ -330,6 +367,7 @@ kill_existing_servers
 echo -e "${CYAN}${GEAR} Configuration:${NC}"
 echo -e "  Environment: ${YELLOW}$ENVIRONMENT${NC} ${LOCAL}"
 echo -e "  Transport: ${YELLOW}$TRANSPORT${NC}"
+echo -e "  AI Model: ${YELLOW}$AI_MODEL${NC}"
 echo -e "  Profile: ${YELLOW}$PROFILE${NC}"
 echo -e "  JAR: ${YELLOW}$JAR_FILE${NC}"
 echo -e "  Test Tools: ${YELLOW}$TEST_TOOLS${NC}"
@@ -347,23 +385,66 @@ if [ "$ENVIRONMENT" = "local" ]; then
     
     echo -e "${BLUE}${GEAR} AI Model Configuration:${NC}"
     
-    # Check for Ollama (only model supported in local profiles)
-    if command -v ollama >/dev/null 2>&1; then
-        echo -e "${GREEN}✓ Ollama CLI detected${NC} (Local development models)"
-        echo -e "  ${CYAN}Chat Model: ${OLLAMA_CHAT_MODEL:-llama3.2:3b}${NC}"
-        echo -e "  ${CYAN}Embedding Model: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}${NC}"
-        echo -e "  ${CYAN}Base URL: ${OLLAMA_BASE_URL:-http://localhost:11434}${NC}"
+    if [ "$AI_MODEL" = "ollama" ]; then
+        # Pure Ollama
+        if command -v ollama >/dev/null 2>&1; then
+            echo -e "${GREEN}✓ Ollama CLI detected${NC} (Pure local models)"
+            echo -e "  ${CYAN}Chat Model: ${OLLAMA_CHAT_MODEL:-phi3}${NC}"
+            echo -e "  ${CYAN}Embedding Model: ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}${NC}"
+            echo -e "  ${CYAN}Base URL: ${OLLAMA_BASE_URL:-http://localhost:11434}${NC}"
+        else
+            echo -e "${RED}✗ Ollama CLI not found${NC}"
+            echo -e "${YELLOW}  Please install Ollama for local development${NC}"
+        fi
+    elif [ "$AI_MODEL" = "openai" ]; then
+        # Pure OpenAI
+        if [ -n "$OPENAI_API_KEY" ]; then
+            echo -e "${GREEN}✓ OpenAI API key detected${NC} (Pure remote models)"
+            echo -e "  ${CYAN}Chat Model: ${OPENAI_CHAT_MODEL:-gpt-4.1-nano}${NC}"
+            echo -e "  ${CYAN}Embedding Model: ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}${NC}"
+            echo -e "  ${CYAN}API: OpenAI REST API${NC}"
+        else
+            echo -e "${RED}✗ OPENAI_API_KEY environment variable not set${NC}"
+            echo -e "${YELLOW}  Please set OPENAI_API_KEY for OpenAI integration${NC}"
+        fi
     else
-        echo -e "${RED}✗ Ollama CLI not found${NC}"
-        echo -e "${YELLOW}  Please install Ollama for local development${NC}"
+        # Check for chat model configuration
+        if [[ "$AI_MODEL" == *"chat-openai"* ]]; then
+            if [ -n "$OPENAI_API_KEY" ]; then
+                echo -e "  ${CYAN}Chat: OpenAI ${OPENAI_CHAT_MODEL:-gpt-4.1-nano}${NC} ✓"
+            else
+                echo -e "  ${RED}Chat: OpenAI (missing OPENAI_API_KEY)${NC} ✗"
+            fi
+        elif [[ "$AI_MODEL" == *"chat-ollama"* ]]; then
+            if command -v ollama >/dev/null 2>&1; then
+                echo -e "  ${CYAN}Chat: Ollama ${OLLAMA_CHAT_MODEL:-phi3}${NC} ✓"
+            else
+                echo -e "  ${RED}Chat: Ollama (CLI not found)${NC} ✗"
+            fi
+        fi
+
+        # Check for embedding model configuration
+        if [[ "$AI_MODEL" == *"embed-openai"* ]]; then
+            if [ -n "$OPENAI_API_KEY" ]; then
+                echo -e "  ${CYAN}Embeddings: OpenAI ${OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}${NC} ✓"
+            else
+                echo -e "  ${RED}Embeddings: OpenAI (missing OPENAI_API_KEY)${NC} ✗"
+            fi
+        elif [[ "$AI_MODEL" == *"embed-ollama"* ]]; then
+            if command -v ollama >/dev/null 2>&1; then
+                echo -e "  ${CYAN}Embeddings: Ollama ${OLLAMA_EMBEDDING_MODEL:-nomic-embed-text:latest}${NC} ✓"
+            else
+                echo -e "  ${RED}Embeddings: Ollama (CLI not found)${NC} ✗"
+            fi
+        fi
     fi
     
     # Model configuration explanation
     echo ""
     echo -e "${BLUE}${GEAR} Local Profile Configuration:${NC}"
-    echo -e "${CYAN}• Uses Ollama models exclusively for simplicity${NC}"
-    echo -e "${CYAN}• No OpenAI integration in local profiles${NC}"
-    echo -e "${CYAN}• Requires Ollama server running on localhost:11434${NC}"
+    echo -e "${CYAN}• Testcontainers PostgreSQL with sample data and vector database${NC}"
+    echo -e "${CYAN}• Requires Docker Desktop to be running${NC}"
+    echo -e "${CYAN}• AI model determined by --ollama or --openai flag${NC}"
 fi
 
 # Transport-specific configuration and execution

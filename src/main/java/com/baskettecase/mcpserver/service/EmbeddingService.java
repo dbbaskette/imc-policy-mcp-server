@@ -25,8 +25,12 @@ import java.util.stream.Collectors;
  * </ul>
  * 
  * <h3>Model Configuration:</h3>
- * <p>Uses Ollama's nomic-embed-text:latest model for local development. This model
- * generates 768-dimensional vectors optimized for semantic text similarity.</p>
+ * <p>The actual embedding model is configured via Spring profiles:
+ * <ul>
+ *   <li>--embed-openai: Uses OpenAI embeddings (text-embedding-3-small, etc.)</li>
+ *   <li>--embed-ollama: Uses local Ollama embeddings (nomic-embed-text, etc.)</li>
+ * </ul>
+ * Models generate different vector dimensions: OpenAI (1536), Ollama (768).</p>
  * 
  * <h3>Integration with RAG Pipeline:</h3>
  * <p>User queries are embedded using this service, then compared against document
@@ -43,17 +47,18 @@ import java.util.stream.Collectors;
 public class EmbeddingService {
 
     /**
-     * The underlying embedding model (Ollama nomic-embed-text:latest for local development)
+     * The underlying embedding model (configured via atomic profiles)
      */
     private final EmbeddingModel embeddingModel;
 
     /**
-     * Constructs a new EmbeddingService with the specified embedding model.
+     * Constructs a new EmbeddingService with the configured embedding model.
+     * The actual model (OpenAI or Ollama) is determined by active Spring profiles.
      * 
-     * @param embeddingModel the Ollama embedding model instance
+     * @param embeddingModel the embedding model instance (configured via atomic profiles)
      */
     @Autowired
-    public EmbeddingService(@Qualifier("ollamaEmbeddingModel") EmbeddingModel embeddingModel) {
+    public EmbeddingService(EmbeddingModel embeddingModel) {
         this.embeddingModel = embeddingModel;
     }
 
