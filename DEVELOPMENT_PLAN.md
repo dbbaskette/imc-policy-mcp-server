@@ -1,176 +1,198 @@
-# Development Plan: IMC Policy MCP Server
+# IMC Policy MCP Server - Development Plan
+## RAG Implementation with Spring AI
 
-## Current State Analysis
+### Overview
+This project implements a Model Context Protocol (MCP) server for insurance policy operations using **Spring AI's built-in RAG capabilities** rather than custom implementations.
 
-**✅ Already Completed:**
-- Basic Spring Boot 3.5.3 + Spring AI 1.0.0 MCP server infrastructure  
-- Dual transport modes (SSE/STDIO) with profile-based configuration
-- Database layer with JPA, H2 test database, PostgreSQL production support
-- Customer query tool with database integration
-- Comprehensive testing infrastructure with unit tests and test script
-
-**🔄 Transformation Required:**
-The current codebase is an insurance accident MCP server that needs to be transformed into a RAG-based policy MCP server with:
-- **Keep existing Customer query tool** ✅
-- **Remove Accident-related functionality** 
-- **Add sophisticated RAG pipeline** with vector database, LLM integration, and natural language processing
-
----
-
-## Development Plan: Incremental Steps
-
-*Based on Spring AI 1.0.0 documentation references from PROJECT.md*
-
-### Phase 1: Project Cleanup & Renaming  
-**Goal:** Clean up accident-specific code while preserving Customer functionality
-
-#### Issue 1: ✅ Project Artifact Renaming (COMPLETED)
-- ✅ Update `pom.xml` - change from `imc-accident-mcp-server` to `imc-policy-mcp-server`
-
-#### Issue 2: Remove Accident-Specific Code (Keep Customer) ✅
-- ✅ Remove `Accident.java` entity class
-- ✅ Remove `AccidentRepository.java` repository  
-- ✅ Remove accident-related queries from `ToolsService.java`
-- ✅ **PRESERVE** `Customer.java` entity and `CustomerRepository.java`
-- ✅ **PRESERVE** `queryCustomer` tool method
-- ✅ Update `schema.sql` - remove accident tables, keep customer table
-- ✅ Update `data.sql` - remove accident data, keep customer data
-
-#### Issue 3: Clean Up Test Infrastructure ✅
-- ✅ Remove accident-specific tests from `ToolsServiceTest.java`
-- ✅ **PRESERVE** customer query tests  
-- ✅ Update `test-mcp.sh` to remove accident testing options
-- ✅ **PRESERVE** customer database testing functionality
-
-### Phase 2: RAG Infrastructure Setup ✅
-**Goal:** Add vector database and AI model integration  
-*Reference: https://docs.spring.io/spring-ai/reference/api/vectordbs/pgvector.html*
-
-#### Issue 4: Add Vector Database Dependencies ✅
-- ✅ Add `spring-ai-starter-pgvector` dependency to `pom.xml`
-- ✅ Add `spring-ai-starter-openai` dependency for cloud profile
-- ✅ Add `spring-ai-starter-ollama` dependency for local profile  
-- ✅ Add Testcontainers for local PostgreSQL with PGVector
-
-#### Issue 5: Configure Database Profiles ✅
-- ✅ **Cloud Profile**: Add Cloud Foundry PostgreSQL binding configuration
-- ✅ **Local Profile**: Add Testcontainers PostgreSQL with PGVector setup
-- ✅ Update `application-*.properties` files with vector database config
-- ✅ Add vector store schema initialization
-
-#### Issue 6: Create Vector Store Integration ✅
-- ✅ Create `VectorStoreService.java` using PGVectorStore  
-- ✅ Add customer-filtered vector search methods (read-only)
-- ✅ **NOTE**: Document population/ingestion handled externally
-- ✅ **Reference**: Spring AI PGVector documentation
-
-### Phase 3: LLM & Embedding Model Integration  
-**Goal:** Add AI model processing capabilities
-*Reference: https://docs.spring.io/spring-ai/reference/api/chat/openai-chat.html, https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html*
-
-#### Issue 7: Configure Chat Models  
-- ✅ **Cloud Profile**: Configure OpenAI ChatModel bean
-- ✅ **Local Profile**: Configure Ollama ChatModel bean
-- ✅ Add model configuration properties for each profile
-- ✅ Create `LLMService.java` for query expansion and answer generation
-
-#### Issue 8: Configure Embedding Models
-*Reference: https://docs.spring.io/spring-ai/reference/api/embeddings/openai-embeddings.html, https://docs.spring.io/spring-ai/reference/api/embeddings/nomic-embed.html*
-- ✅ **Cloud Profile**: Configure OpenAI EmbeddingModel bean  
-- ✅ **Local Profile**: Configure nomic-embed EmbeddingModel via Ollama
-- ✅ Add embedding configuration properties
-- ✅ Create `EmbeddingService.java` for text-to-vector conversion
-
-### Phase 4: RAG Pipeline Implementation
-**Goal:** Implement complete RAG workflow  
-*Reference: https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html*
-
-#### Issue 9: Create RAG Tool  
-- [ ] Add new `@Tool` method: `answerQuestion(String question, Integer customerId)`
-- [ ] Implement RAG pipeline:
-  1. Query expansion using LLM
-  2. Question embedding using EmbeddingModel  
-  3. Vector search with customer filtering
-  4. Context-based answer generation using LLM
-- [ ] Add comprehensive error handling and logging
-- [ ] **Reference**: Spring AI RAG documentation
-
-#### Issue 10: Vector Store Query Interface
-- [ ] Create read-only vector store query interface
-- [ ] Add customer-filtered vector search methods
-- [ ] **NOTE**: Document population handled by external systems
-- [ ] Focus on retrieval and customer filtering capabilities
-
-### Phase 5: Testing & Documentation  
-**Goal:** Comprehensive testing and documentation updates
-
-#### Issue 11: Create RAG Tests
-- [ ] Unit tests for `VectorStoreService`
-- [ ] Unit tests for `LLMService` and `EmbeddingService`  
-- [ ] Integration tests for complete RAG pipeline
-- [ ] Mock-based testing for AI model interactions
-- [ ] **PRESERVE** existing customer query tests
-
-#### Issue 12: Update Test Script & Configuration
-- [ ] Add RAG pipeline testing to `test-mcp.sh`
-- [ ] Add colorful output for RAG testing phases
-- [ ] Test both local (Ollama) and cloud (OpenAI) configurations
-- [ ] Add Docker Compose for local testing environment
-
-#### Issue 13: Documentation Updates
-- [ ] Update `README.md` with RAG architecture overview and icons ✨
-- [ ] Document new `answerQuestion` tool usage
-- [ ] Add setup instructions for local vs cloud profiles  
-- [ ] Update `CLAUDE.md` with RAG-specific context
-- [ ] Add architecture diagrams showing RAG pipeline flow
-
----
-
-## Technical Implementation Notes
-
-### New RAG Tool Specification  
-```java
-@Tool(description = "Answer natural language questions using RAG with customer-specific context")
-public String answerQuestion(String question, Integer customerId)
+### Architecture (Revised)
+```
+MCP Client → ToolsService → ChatClient → [RAG Advisor] → VectorStore (PGVector)
+                                     ↓
+                                  ChatModel (Ollama/OpenAI)
 ```
 
-### Key Dependencies (Spring AI 1.0.0)
-- `spring-ai-starter-pgvector` - Vector database integration
-- `spring-ai-starter-openai` - OpenAI models (cloud profile)  
-- `spring-ai-starter-ollama` - Local Ollama models
-- `testcontainers-postgresql` - Local PostgreSQL with PGVector
+### Key Spring AI Components Used
 
-### Profile Architecture
-- **Local Profile**: Ollama + nomic-embed + Testcontainers PostgreSQL
-- **Cloud Profile**: OpenAI API + Cloud Foundry PostgreSQL binding
+#### 1. VectorStore Integration
+- **PGVectorStore** - Spring AI's PostgreSQL vector database integration
+- **Document** - Spring AI's document abstraction with metadata
+- **FilterExpressionBuilder** - Dynamic customer filtering
 
-### RAG Pipeline Flow
-1. **Input**: Natural language question + customerId
-2. **Query Expansion**: LLM enhances the question  
-3. **Embedding**: Convert expanded query to vector
-4. **Vector Search**: Find relevant documents filtered by customerId
-5. **Answer Generation**: LLM creates answer from retrieved context
-6. **Output**: Contextual answer with source references
+#### 2. RAG Pipeline
+- **RetrievalAugmentationAdvisor** - Handles entire RAG workflow
+- **VectorStoreDocumentRetriever** - Semantic search with filtering
+- **ChatClient** - Unified chat interface with advisor integration
+
+#### 3. Configuration
+- **Auto-configuration** for PGVector, Ollama, and OpenAI
+- **Profile-based** model selection (local vs cloud)
 
 ---
 
-## Success Criteria
+## Implementation Phases
 
-✅ **Functional Requirements:**
-- Customer query tool preserved and working
-- RAG pipeline processes natural language questions  
-- Customer-filtered document retrieval
-- LLM-generated contextual answers
-- Both local (Ollama) and cloud (OpenAI) profiles functional
+### ✅ Phase 1: Base MCP Server (COMPLETED)
+- [x] MCP server with STDIO/SSE transport
+- [x] Customer query tool
+- [x] Database connectivity (H2 for customers)
+- [x] Profile-based configuration
 
-✅ **Technical Requirements:**
-- PostgreSQL with PGVector integration
-- Comprehensive test coverage with colored output
-- Docker-based local development environment  
-- Cloud Foundry deployment compatibility
-- MCP protocol compliance maintained
+### ✅ Phase 2: Spring AI VectorStore Setup (COMPLETED)
+**References**: 
+- [PGVector Documentation](https://docs.spring.io/spring-ai/reference/api/vectordbs/pgvector.html)
+- [RAG Documentation](https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html)
 
-✅ **Documentation Requirements:**
-- Updated README with icons and RAG architecture
-- Comprehensive setup instructions
-- Tool usage examples and API documentation
+#### Tasks:
+- [x] **Configure PGVectorStore** - uses Spring AI auto-configuration
+- [x] **Remove custom VectorDocument entity** - replaced with Spring AI Document
+- [x] **Update data loading** - PolicyDocumentLoader uses `VectorStore.add(List<Document>)`
+- [x] **Configure customer metadata** - FilterExpressionBuilder for customer filtering
+
+#### Technical Details:
+```java
+// Spring AI approach - no custom entities needed
+@Bean
+VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
+    return new PgVectorStore.Builder(jdbcTemplate, embeddingModel)
+        .withSchemaName("public")
+        .withVectorTableName("vector_store")
+        .withDimensions(768)
+        .build();
+}
+```
+
+### ✅ Phase 3: Spring AI RAG Pipeline (COMPLETED)
+**References**: 
+- [Retrieval Augmented Generation](https://docs.spring.io/spring-ai/reference/api/retrieval-augmented-generation.html)
+- [ChatClient Documentation](https://docs.spring.ai/spring-ai/reference/api/chat/chatclient.html)
+
+#### Tasks:
+- [x] **Remove custom RAGService** - replaced with SpringAIRAGService
+- [x] **Implement proper RAG pipeline** using VectorStore + ChatClient
+- [x] **Setup ChatClient** with proper configuration
+- [x] **Implement customer filtering** using FilterExpressionBuilder
+
+#### Technical Details:
+```java
+// Spring AI RAG - no manual embedding generation
+@Bean
+RetrievalAugmentationAdvisor retrievalAdvisor(VectorStore vectorStore) {
+    return new RetrievalAugmentationAdvisor(
+        VectorStoreDocumentRetriever.builder()
+            .vectorStore(vectorStore)
+            .similarityThreshold(0.7)
+            .topK(5)
+            .build());
+}
+
+@Bean
+ChatClient chatClient(ChatModel chatModel, RetrievalAugmentationAdvisor advisor) {
+    return ChatClient.builder(chatModel)
+        .defaultAdvisors(advisor)
+        .build();
+}
+```
+
+### 🔄 Phase 4: MCP Tool Implementation (PLANNED)
+**References**: 
+- [MCP Tools](https://docs.spring.io/spring-ai/reference/api/tools.html)
+- [ChatClient Usage](https://docs.spring.ai/spring-ai/reference/api/chat/chatclient.html)
+
+#### Tasks:
+- [ ] **Simplify answerQuestion tool** to use ChatClient
+- [ ] **Implement customer filtering** via advisor context
+- [ ] **Add query expansion** using ChatClient prompting
+- [ ] **Return structured responses** with source metadata
+
+#### Technical Details:
+```java
+@Tool(description = "Answer insurance questions with customer-specific context")
+public String answerQuestion(String question, Integer customerId) {
+    // Let Spring AI handle the entire RAG pipeline
+    return chatClient.prompt()
+        .user(question)
+        .advisors(spec -> spec.param("customerId", customerId))
+        .call()
+        .content();
+}
+```
+
+---
+
+## Data Flow (Spring AI Approach)
+
+### Current Flow (Custom - ❌ Wrong)
+```
+Question → Manual Embedding → Custom Query → Manual Context → LLM → Response
+```
+
+### Correct Flow (Spring AI - ✅ Implemented)
+```
+Question + Customer ID → VectorStore Search → Retrieved Docs → Context → ChatClient → Answer
+                           ↓                      ↓               ↓
+                    [Auto Embedding + Filter] [Content Extraction] [Prompt Engineering]
+```
+
+---
+
+## Configuration Strategy
+
+### Local Profile (`local-sse`, `local-stdio`)
+- **Vector Store**: Testcontainers PostgreSQL with PGVector
+- **Chat Model**: Ollama (llama3.2:3b)
+- **Embedding Model**: Ollama (nomic-embed-text:latest)
+- **Data**: Test data from vector_store_testdata.csv
+
+### Cloud Profile (`sse`, `stdio`) 
+- **Vector Store**: Cloud Foundry bound PostgreSQL
+- **Chat Model**: OpenAI GPT model
+- **Embedding Model**: OpenAI embedding model
+- **Data**: Production policy documents
+
+---
+
+## Key Benefits of Spring AI Approach
+
+1. **Simplified Code**: No manual embedding generation or vector operations
+2. **Built-in Optimization**: Automatic query expansion and context management
+3. **Consistent API**: Standard ChatClient interface for all LLM interactions
+4. **Flexible Filtering**: Dynamic customer filtering via FilterExpressionBuilder
+5. **Maintainable**: Uses Spring AI's tested and optimized RAG pipeline
+
+---
+
+## Current Status: ✅ REFACTORING COMPLETED
+
+**Problem Solved**: ✅ Replaced custom RAG implementation with Spring AI native components
+**Implementation**: Spring AI VectorStore + ChatClient + Document abstraction
+**Priority**: COMPLETED - Now follows Spring AI best practices
+
+### ✅ Completed Refactoring:
+1. ✅ Removed custom RAG components (RAGService, VectorDocument, custom repositories)
+2. ✅ Configured Spring AI PGVectorStore with auto-configuration
+3. ✅ Implemented proper RAG pipeline with VectorStore + ChatClient
+4. ✅ Updated MCP tools to use SpringAIRAGService with customer filtering
+
+---
+
+## 🏁 Implementation Summary
+
+### ✅ Key Components Built:
+1. **VectorStoreConfiguration** - Spring AI auto-configuration setup
+2. **PolicyDocumentLoader** - Loads CSV data as Spring AI Document objects
+3. **SpringAIRAGService** - Complete RAG pipeline using Spring AI components
+4. **RAGConfiguration** - ChatClient configuration for RAG operations
+5. **Updated ToolsService** - Simplified MCP tool using SpringAIRAGService
+
+### 🔧 Technical Architecture:
+- **VectorStore**: Auto-configured PGVectorStore with customer metadata filtering
+- **Documents**: Spring AI Document objects with customer metadata (refnum1, refnum2)
+- **Search**: FilterExpressionBuilder for customer-specific document retrieval
+- **Generation**: ChatClient with context-enhanced prompts
+- **Integration**: MCP tool directly calls SpringAIRAGService.answerQuestion()
+
+---
+
+*Last Updated: 2025-08-01*  
+*Status: ✅ SPRING AI REFACTORING COMPLETED*  
+*Reference Documentation: Spring AI 1.0.0 GA*

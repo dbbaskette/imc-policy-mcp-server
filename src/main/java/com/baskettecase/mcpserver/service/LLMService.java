@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
  * 🤖 Large Language Model Service for Insurance MegaCorp
  * 
  * <p>This service provides chat model operations for the insurance policy RAG pipeline,
- * including query expansion and contextual answer generation. It integrates with Ollama
- * for local development and provides a foundation for cloud deployment.</p>
+ * including query expansion and contextual answer generation. It supports both OpenAI
+ * and Ollama models through Spring AI's atomic profile architecture.</p>
  * 
  * <h3>Core Capabilities:</h3>
  * <ul>
@@ -28,8 +28,12 @@ import java.util.stream.Collectors;
  * </ul>
  * 
  * <h3>Model Configuration:</h3>
- * <p>Currently configured to use Ollama's llama3.2:3b model for local development.
- * The service uses Spring AI's ChatModel abstraction for easy model switching.</p>
+ * <p>The actual chat model is configured via Spring profiles:
+ * <ul>
+ *   <li>--chat-openai: Uses OpenAI models (gpt-4.1-nano, etc.)</li>
+ *   <li>--chat-ollama: Uses local Ollama models (phi3, llama, etc.)</li>
+ * </ul>
+ * The service uses Spring AI's ChatModel abstraction for transparent model switching.</p>
  * 
  * <h3>Usage in RAG Pipeline:</h3>
  * <ol>
@@ -47,17 +51,18 @@ import java.util.stream.Collectors;
 public class LLMService {
 
     /**
-     * The underlying chat model (Ollama llama3.2:3b for local development)
+     * The underlying chat model (configured via atomic profiles)
      */
     private final ChatModel chatModel;
 
     /**
-     * Constructs a new LLMService with the specified chat model.
+     * Constructs a new LLMService with the configured chat model.
+     * The actual model (OpenAI or Ollama) is determined by active Spring profiles.
      * 
-     * @param chatModel the Ollama chat model instance
+     * @param chatModel the chat model instance (configured via atomic profiles)
      */
     @Autowired
-    public LLMService(@Qualifier("ollamaChatModel") ChatModel chatModel) {
+    public LLMService(ChatModel chatModel) {
         this.chatModel = chatModel;
     }
 

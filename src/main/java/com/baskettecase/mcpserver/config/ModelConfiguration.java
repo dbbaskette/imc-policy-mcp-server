@@ -5,14 +5,18 @@ import org.springframework.context.annotation.Configuration;
 /**
  * Model configuration for the MCP server.
  * 
- * Local profiles (local-sse, local-stdio) use only Ollama models for simplicity.
- * This avoids bean conflicts and provides a clean development experience.
+ * Model creation is handled entirely by Spring AI auto-configuration based on
+ * the enabled/disabled properties in our atomic profile files:
+ * - application-chat-openai.properties
+ * - application-chat-ollama.properties  
+ * - application-embed-openai.properties
+ * - application-embed-ollama.properties
  * 
- * Services use @Qualifier("ollamaChatModel") and @Qualifier("ollamaEmbeddingModel")
- * to explicitly reference the Ollama model beans.
+ * This approach lets Spring AI handle the complex bean creation and API changes
+ * while we control which models are active through simple property flags.
  */
 @Configuration
 public class ModelConfiguration {
-    // All model configuration is handled through Spring AI auto-configuration
-    // based on the spring.ai.ollama.* properties in application-local-*.properties
+    // Spring AI auto-configuration handles all model bean creation
+    // based on spring.ai.*.enabled properties
 }

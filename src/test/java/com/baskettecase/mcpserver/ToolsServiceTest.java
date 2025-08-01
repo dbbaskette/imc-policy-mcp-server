@@ -2,6 +2,7 @@ package com.baskettecase.mcpserver;
 
 import com.baskettecase.mcpserver.model.Customer;
 import com.baskettecase.mcpserver.repository.CustomerRepository;
+import com.baskettecase.mcpserver.service.SpringAIRAGService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -9,24 +10,33 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.Optional;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class ToolsServiceTest {
 
     @Mock
     private CustomerRepository customerRepository;
+    
+    @Mock
+    private SpringAIRAGService ragService;
 
     private ToolsService toolsService;
 
     @BeforeEach
     void setUp() {
         toolsService = new ToolsService(customerRepository);
+        // Manually set the RAG service for testing
+        try {
+            java.lang.reflect.Field ragField = ToolsService.class.getDeclaredField("ragService");
+            ragField.setAccessible(true);
+            ragField.set(toolsService, ragService);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to inject RAG service for testing", e);
+        }
     }
 
     @DisplayName("Customer Query Tests")
@@ -107,6 +117,95 @@ class ToolsServiceTest {
         assertTrue(result.contains("Database connection successful"));
         assertTrue(result.contains("Total customers in database: 0"));
         assertTrue(result.contains("Database test completed successfully"));
+    }
+
+    @DisplayName("Spring AI RAG Answer Question Tests")
+    @Test
+    void testAnswerQuestion_success() {
+        // Given
+        String question = "What does my policy cover?";
+        Integer customerId = 100001;
+        
+        String mockResponse = """
+            === Insurance Policy Assistant ===
+            
+            👤 Customer ID: 100001
+            ❓ Question: What does my policy cover?
+            
+            🤖 Answer:
+            Your policy covers comprehensive, collision, and liability insurance.
+            
+            📊 Search Results:
+              - Documents Found: 2
+              - Similarity Threshold: 0.7
+              - Max Results: 5
+            
+            📄 Source Documents:
+              1. ID: doc1
+                 Preview: Policy coverage details...
+                 Metadata: {refnum1=100001}
+            
+            ⏰ Powered by Spring AI RAG Pipeline
+            """;
+        
+        when(ragService.answerQuestion(question, customerId)).thenReturn(mockResponse);
+
+        // When
+        String result = toolsService.answerQuestion(question, customerId);
+
+        // Then
+        assertTrue(result.contains("Insurance Policy Assistant"));
+        assertTrue(result.contains("Customer ID: 100001"));
+        assertTrue(result.contains("Question: What does my policy cover?"));
+        assertTrue(result.contains("comprehensive, collision, and liability"));
+        assertTrue(result.contains("Documents Found: 2"));
+        assertTrue(result.contains("Source Documents:"));
+        assertTrue(result.contains("Spring AI RAG Pipeline"));
+        
+        verify(ragService).answerQuestion(question, customerId);
+    }
+
+    @Test
+    void testAnswerQuestion_error() {
+        // Given
+        String question = "";
+        Integer customerId = 100001;
+        
+        String mockResponse = "❌ Error: Question cannot be empty";
+        
+        when(ragService.answerQuestion(question, customerId)).thenReturn(mockResponse);
+
+        // When
+        String result = toolsService.answerQuestion(question, customerId);
+
+        // Then
+        assertTrue(result.contains("❌ Error: Question cannot be empty"));
+        
+        verify(ragService).answerQuestion(question, customerId);
+    }
+
+    @Test
+    void testAnswerQuestion_ragServiceException() {
+        // Given
+        String question = "What is covered?";
+        Integer customerId = 100001;
+        
+        String mockResponse = """
+            ❌ Error processing your question: Vector store connection failed
+            Please try again or contact support if the issue persists.
+            """;
+        
+        when(ragService.answerQuestion(question, customerId)).thenReturn(mockResponse);
+
+        // When
+        String result = toolsService.answerQuestion(question, customerId);
+
+        // Then
+        assertTrue(result.contains("❌ Error processing your question"));
+        assertTrue(result.contains("Vector store connection failed"));
+        assertTrue(result.contains("Please try again"));
+        
+        verify(ragService).answerQuestion(question, customerId);
     }
 
 }

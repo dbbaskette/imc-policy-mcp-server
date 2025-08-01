@@ -2,6 +2,7 @@ package com.baskettecase.mcpserver;
 
 import com.baskettecase.mcpserver.model.Customer;
 import com.baskettecase.mcpserver.repository.CustomerRepository;
+import com.baskettecase.mcpserver.service.SpringAIRAGService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import java.util.Optional;
  * <h3>Available Tools:</h3>
  * <ul>
  *   <li>👤 {@link #queryCustomer(Integer)} - Retrieve customer information by ID</li>
+ *   <li>🧠 {@link #answerQuestion(String, Integer)} - Answer questions using RAG pipeline with policy documents</li>
  *   <li>🗄️ {@link #testDatabase()} - Test database connectivity and show sample data</li>
  * </ul>
  * 
@@ -38,9 +40,15 @@ public class ToolsService {
 	 * Repository for customer data access operations
 	 */
 	private final CustomerRepository customerRepository;
+	
+	/**
+	 * Spring AI RAG service for intelligent question answering with policy documents
+	 */
+	@Autowired
+	private SpringAIRAGService ragService;
 
 	/**
-	 * Constructs a new ToolsService with the specified customer repository.
+	 * Constructs a new ToolsService with the specified repository.
 	 * 
 	 * @param customerRepository the repository for customer data operations
 	 */
@@ -77,6 +85,32 @@ public class ToolsService {
 			customer.getCity(),
 			customer.getState(),
 			customer.getZipCode());
+	}
+
+	/**
+	 * 🧠 Answer questions using Spring AI RAG pipeline
+	 * 
+	 * <p>This tool uses Spring AI's native RAG capabilities to find relevant policy documents
+	 * for the specified customer and generates intelligent answers using ChatClient.</p>
+	 * 
+	 * <h3>Spring AI Features:</h3>
+	 * <ul>
+	 *   <li>🔍 VectorStore with customer-specific filtering</li>
+	 *   <li>📄 Automatic embedding generation and similarity search</li>
+	 *   <li>🤖 ChatClient integration for answer generation</li>
+	 *   <li>📊 Built-in context management and prompt engineering</li>
+	 * </ul>
+	 * 
+	 * <h3>Pipeline:</h3>
+	 * <pre>Question → VectorStore Search → Context → ChatClient → Answer</pre>
+	 * 
+	 * @param question The question to answer about insurance policies
+	 * @param customerId The customer ID for document filtering (refnum1 or refnum2)
+	 * @return Formatted answer with source document information
+	 */
+	@Tool(description = "Answer insurance policy questions using Spring AI RAG pipeline. Searches customer-specific documents and generates intelligent answers.")
+	public String answerQuestion(String question, Integer customerId) {
+		return ragService.answerQuestion(question, customerId);
 	}
 
 	/**
