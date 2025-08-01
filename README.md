@@ -38,7 +38,8 @@
 <td width="50%">
 
 ### 🌟 **Core Capabilities**
-- 🤖 **Dual AI Models**: Ollama (local) with fallback support
+- 🎯 **Atomic Model Profiles**: Independent chat and embedding model selection
+- 🤖 **Multi-AI Support**: OpenAI, Ollama, and hybrid configurations
 - 🗂️ **Vector RAG**: PostgreSQL + PGVector for document search
 - 🔄 **Dual Transport**: STDIO (Claude Desktop) + SSE (Web clients)
 - 🏢 **Insurance Domain**: Customer and policy management tools
@@ -79,7 +80,7 @@ graph TB
     subgraph "💾 Data Layer"
         G[(PostgreSQL<br/>🐘)]
         H[(Vector Store<br/>📈)]
-        I[Ollama<br/>🦙]
+        I[AI Models<br/>🤖]
     end
     
     A --> C
@@ -132,27 +133,29 @@ graph TB
 <td align="center">☕<br/><strong>Java 21+</strong></td>
 <td align="center">📦<br/><strong>Maven 3.6+</strong></td>
 <td align="center">🐋<br/><strong>Docker Desktop</strong></td>
-<td align="center">🦙<br/><strong>Ollama</strong></td>
+<td align="center">🦙<br/><strong>Ollama</strong><br/><small>(for local models)</small></td>
+<td align="center">🔑<br/><strong>OpenAI API Key</strong><br/><small>(for cloud models)</small></td>
 </tr>
 </table>
 
 ### ⚡ **One-Command Setup**
 
 ```bash
-# 🏗️ Build and test everything
-./test-mcp.sh --local --sse --build --test-tools
+# 🏗️ Recommended hybrid setup (reliable chat + free embeddings)
+./test-mcp.sh --local --sse --chat-openai --embed-ollama --build --test-tools
 ```
 
 <details>
 <summary>📖 <strong>Step-by-Step Setup</strong></summary>
 
-#### 1️⃣ **Install Ollama Models**
+#### 1️⃣ **Setup Environment**
 ```bash
-# 💬 Install chat model
-ollama pull llama3.2:3b
+# 🔑 Set OpenAI API key (for hybrid setup)
+export OPENAI_API_KEY="your-api-key-here"
 
-# 🔤 Install embedding model  
-ollama pull nomic-embed-text:latest
+# 🦙 Install Ollama models (for local/hybrid setup)
+ollama pull phi3                    # Chat model
+ollama pull nomic-embed-text        # Embedding model
 ```
 
 #### 2️⃣ **Build the Project**
@@ -160,13 +163,19 @@ ollama pull nomic-embed-text:latest
 mvn clean install
 ```
 
-#### 3️⃣ **Run the Server**
+#### 3️⃣ **Choose Your AI Setup**
 ```bash
-# 🖥️ For Claude Desktop (STDIO)
-./test-mcp.sh --local --stdio
+# 🎯 Recommended: Hybrid (OpenAI chat + Ollama embeddings)
+./test-mcp.sh --local --sse --chat-openai --embed-ollama
 
-# 🌐 For web clients (SSE)  
-./test-mcp.sh --local --sse
+# 💰 Pure local (no API costs)
+./test-mcp.sh --local --sse --chat-ollama --embed-ollama
+
+# ☁️ Pure cloud (maximum reliability)
+./test-mcp.sh --cloud --chat-openai --embed-openai
+
+# 🖥️ Claude Desktop integration
+./test-mcp.sh --local --stdio --chat-openai --embed-ollama
 ```
 
 </details>
@@ -175,20 +184,69 @@ mvn clean install
 
 ## 🔧 Configuration
 
-### 🏠 **Local Development Profiles**
+### 🎯 **Atomic Model Profile Architecture**
 
-| Profile | Transport | Database | AI Models | Use Case |
-|---------|-----------|----------|-----------|----------|
-| 🖥️ `local-stdio` | STDIO | TestContainers PostgreSQL | 🦙 Ollama | Claude Desktop |
-| 🌐 `local-sse` | SSE | H2 In-Memory | 🦙 Ollama | Web Development |
+The application uses atomic profiles for maximum flexibility in AI model selection. Instead of monolithic profiles, you can independently choose:
+
+- **1 Transport Profile**: How the MCP server communicates (STDIO, SSE, or Cloud)
+- **1 Chat Profile**: Which chat model to use (OpenAI or Ollama)  
+- **1 Embedding Profile**: Which embedding model to use (OpenAI or Ollama)
+
+This allows **4 atomic profiles to create unlimited combinations**:
+
+#### **✨ Benefits of Atomic Profiles**
+- 💰 **Cost Control**: Use free local models for embeddings, paid APIs for chat
+- 🔄 **Easy Switching**: Change models without touching code
+- 🎯 **Optimized Performance**: Choose the best model for each task
+- 🛡️ **Risk Mitigation**: Fallback between local and cloud providers
+- 📊 **Flexible Deployment**: Different configs for dev, staging, production
+
+#### **🚀 Transport Profiles** (choose one)
+| Profile | Transport | Database | Use Case |
+|---------|-----------|----------|----------|
+| 🖥️ `local-stdio` | STDIO | TestContainers PostgreSQL | Claude Desktop integration |
+| 🌐 `local-sse` | SSE | TestContainers PostgreSQL | Web development & testing |
+| ☁️ `cloud` | SSE | External PostgreSQL | Production deployment |
+
+#### **🤖 AI Model Profiles** (choose one chat + one embedding)
+| Profile | Type | Model | Cost | Performance |
+|---------|------|-------|------|-------------|
+| 💬 `chat-openai` | Chat | gpt-4.1-nano | $$$ | ⭐⭐⭐⭐⭐ |
+| 💬 `chat-ollama` | Chat | phi3 | FREE | ⭐⭐⭐⭐ |
+| 🔤 `embed-openai` | Embedding | text-embedding-3-small | $$$ | ⭐⭐⭐⭐⭐ |
+| 🔤 `embed-ollama` | Embedding | nomic-embed-text | FREE | ⭐⭐⭐⭐ |
+
+#### **🎛️ Recommended Combinations**
+```bash
+# 🎯 Hybrid (Best of both worlds)
+./test-mcp.sh --local --sse --chat-openai --embed-ollama
+
+# 💰 Pure Local (No API costs)  
+./test-mcp.sh --local --sse --chat-ollama --embed-ollama
+
+# ☁️ Pure Cloud (Maximum reliability)
+./test-mcp.sh --cloud --chat-openai --embed-openai
+```
 
 ### ⚙️ **Environment Variables**
 
 ```bash
-# 🦙 Ollama Configuration
+# 🔑 OpenAI Configuration (for OpenAI profiles)
+export OPENAI_API_KEY="your-api-key-here"
+export OPENAI_CHAT_MODEL="gpt-4.1-nano"              # Optional override
+export OPENAI_EMBEDDING_MODEL="text-embedding-3-small" # Optional override
+
+# 🦙 Ollama Configuration (for Ollama profiles)
 export OLLAMA_BASE_URL="http://localhost:11434"
-export OLLAMA_CHAT_MODEL="llama3.2:3b" 
-export OLLAMA_EMBEDDING_MODEL="nomic-embed-text:latest"
+export OLLAMA_CHAT_MODEL="phi3"                      # Optional override
+export OLLAMA_EMBEDDING_MODEL="nomic-embed-text"     # Optional override
+
+# 🗄️ Database Configuration (for cloud profile)
+export PGVECTOR_HOST="localhost"
+export PGVECTOR_PORT="5432"
+export PGVECTOR_DATABASE="policy_rag"
+export PGVECTOR_USERNAME="postgres"
+export PGVECTOR_PASSWORD="password"
 ```
 
 ---
@@ -240,10 +298,10 @@ export OLLAMA_EMBEDDING_MODEL="nomic-embed-text:latest"
 The `./test-mcp.sh` script provides comprehensive testing with beautiful colored output:
 
 ```bash
-# 🎨 Available test options
-./test-mcp.sh --local --sse --test-tools     # 🌐 Test SSE with tools
-./test-mcp.sh --local --stdio --test-tools   # 🖥️ Test STDIO with tools  
-./test-mcp.sh --local --sse --build          # 🏗️ Build then test SSE
+# 🎨 Available test options with atomic profiles
+./test-mcp.sh --local --sse --chat-openai --embed-ollama --test-tools  # 🎯 Hybrid setup
+./test-mcp.sh --local --stdio --chat-ollama --embed-ollama --test-tools # 🖥️ Pure local
+./test-mcp.sh --cloud --chat-openai --embed-openai --build --test-tools # ☁️ Production test
 ```
 
 ### 📊 **Test Coverage**
@@ -276,15 +334,14 @@ The `./test-mcp.sh` script provides comprehensive testing with beautiful colored
 • Requires Docker Desktop to be running
 
 ⚙️ AI Model Configuration:
-✓ Ollama CLI detected (Local development models)
-  Chat Model: llama3.2:3b
-  Embedding Model: nomic-embed-text:latest
-  Base URL: http://localhost:11434
-
-⚙️ Local Profile Configuration:
-• Uses Ollama models exclusively for simplicity
-• No OpenAI integration in local profiles  
-• Requires Ollama server running on localhost:11434
+✓ OpenAI API key detected
+  Chat: OpenAI gpt-4.1-nano ✓
+  Embedding: Ollama nomic-embed-text ✓
+  
+🎯 Hybrid Configuration (Recommended):
+• Chat: OpenAI for reliable responses
+• Embeddings: Ollama for cost-effective vector operations
+• Transport: SSE for web development
 ```
 
 ---
@@ -301,13 +358,28 @@ Add to your `claude_desktop_config.json`:
     "imc-policy-server": {
       "command": "java",
       "args": [
-        "-Dspring.profiles.active=local-stdio", 
+        "-Dspring.profiles.active=local-stdio,chat-openai,embed-ollama", 
         "-jar",
         "/path/to/imc-policy-mcp-server/target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar"
-      ]
+      ],
+      "env": {
+        "OPENAI_API_KEY": "your-api-key-here"
+      }
     }
   }
 }
+```
+
+**Profile Options:**
+```json
+// 🎯 Hybrid (recommended)
+"spring.profiles.active=local-stdio,chat-openai,embed-ollama"
+
+// 💰 Pure local  
+"spring.profiles.active=local-stdio,chat-ollama,embed-ollama"
+
+// ☁️ Pure cloud
+"spring.profiles.active=local-stdio,chat-openai,embed-openai"
 ```
 
 ### 2️⃣ **Usage Examples**
