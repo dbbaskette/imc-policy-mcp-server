@@ -1,0 +1,72 @@
+---
+# ============================================================================
+# Cloud Foundry Deployment Manifest Template - IMC Policy MCP Server
+# ============================================================================
+# This is a TEMPLATE manifest for deploying the Insurance MegaCorp Policy MCP 
+# Server to Cloud Foundry. Copy this file and customize for your environment.
+#
+# BEFORE DEPLOYMENT:
+#   1. Copy this template: cp manifest.yml.template manifest.yml
+#   2. Update the route domain in manifest.yml
+#   3. Deploy with: cf push -f manifest.yml
+#
+# SERVICES REQUIRED:
+#   - embed-model: AI embedding service (OpenAI or equivalent)
+#   - chat-model: AI chat service (OpenAI or equivalent)  
+#   - embed-db: PostgreSQL database with pgvector extension
+#
+# ATOMIC PROFILES ACTIVATED:
+#   - cloud: Cloud Foundry optimized transport
+#   - chat-openai: OpenAI chat models via chat-model service
+#   - embed-openai: OpenAI embeddings via embed-model service
+# ============================================================================
+
+applications:
+- name: imc-policy-mcp-server
+  
+  # Application Configuration
+  instances: 1
+  memory: 2G
+  disk_quota: 1G
+  timeout: 180
+  
+  # Java Application Settings
+  # Using the offline Java buildpack for Tanzu Cloud Foundry
+  buildpacks:
+    - java_buildpack_offline
+  
+  # JAR Path (adjust if needed)
+  path: target/imc-policy-mcp-server-0.0.1-SNAPSHOT.jar
+  
+  # Health Check Configuration
+  health-check-type: http
+  health-check-http-endpoint: /actuator/health
+  health-check-invocation-timeout: 30
+  
+  # Routing Configuration
+  # CUSTOMIZE: Replace with your Cloud Foundry domain
+  routes:
+    - route: imc-policy-mcp-server.apps.your-cf-domain.com
+  
+  # ============================================================================
+  # Service Bindings - Cloud Foundry Services
+  # ============================================================================
+  services:
+    # AI Embedding Service (OpenAI Embeddings or equivalent)
+    - embed-model
+    
+    # AI Chat Service (OpenAI Chat or equivalent) 
+    - chat-model
+    
+    # PostgreSQL Database with pgvector extension
+    - embed-db
+  
+  # ============================================================================
+  # Environment Variables
+  # ============================================================================
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 21.+ } }'
+    SPRING_PROFILES_ACTIVE: cloud,chat-openai,embed-openai
+    JVM_HEAP_RATIO: 0.75
+    JAVA_OPTS: '-Xmx1536m -Xss512k -XX:ReservedCodeCacheSize=512M -XX:MaxMetaspaceSize=512M'
+

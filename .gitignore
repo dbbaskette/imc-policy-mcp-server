@@ -61,3 +61,8 @@ prompt/
 .windsurf.json
 CURRENT.txt
 README-CLAUDE-DESKTOP.md
+
+# Environment-specific Cloud Foundry manifests (keep your domains private)
+manifest.yml
+release.sh
+.release-exec
