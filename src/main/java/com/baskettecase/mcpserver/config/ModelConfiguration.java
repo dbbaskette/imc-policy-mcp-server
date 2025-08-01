@@ -3,19 +3,16 @@ package com.baskettecase.mcpserver.config;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Configuration for Chat and Embedding models based on active profiles.
+ * Model configuration for the MCP server.
  * 
- * Spring AI 1.0.0 uses auto-configuration based on application properties.
- * Model selection is handled through property-based disabling to avoid
- * circular dependencies with tool registration.
+ * Local profiles (local-sse, local-stdio) use only Ollama models for simplicity.
+ * This avoids bean conflicts and provides a clean development experience.
  * 
- * For local profiles (local-sse, local-stdio):
- * - Both Ollama and OpenAI models are auto-configured based on available properties
- * - Services use @Qualifier to select specific model implementations
- * - Priority is determined at the service level, not configuration level
+ * Services use @Qualifier("ollamaChatModel") and @Qualifier("ollamaEmbeddingModel")
+ * to explicitly reference the Ollama model beans.
  */
 @Configuration
 public class ModelConfiguration {
-    // Spring AI auto-configuration handles model instantiation
-    // Service classes handle model selection via @Qualifier annotations
+    // All model configuration is handled through Spring AI auto-configuration
+    // based on the spring.ai.ollama.* properties in application-local-*.properties
 }

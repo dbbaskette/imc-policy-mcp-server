@@ -6,8 +6,8 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 /**
- * Separate service for testing AI models to avoid circular dependencies
- * This service is not injected into other tool services to break the cycle
+ * Service for testing AI model connectivity.
+ * This service is not injected into other tool services to avoid circular dependencies.
  */
 @Service
 public class AIModelTestService {
@@ -20,34 +20,32 @@ public class AIModelTestService {
     }
 
     /**
-     * Test the AI model connectivity for LLM and Embedding services
-     * @return Status of both LLM and Embedding model connections
+     * Tests the connectivity for the currently configured Chat and Embedding models.
+     * @return A status report of the AI model connections.
      */
-    @Tool(description = "Test AI model connectivity including chat and embedding models")
+    @Tool(description = "Test AI model connectivity for both chat and embedding models")
     public String testAIModels() {
         StringBuilder result = new StringBuilder();
         result.append("=== AI Model Connectivity Test ===\n\n");
-        
+
         // Test LLM Service
         result.append("🤖 Chat Model Test:\n");
         try {
             LLMService llmService = applicationContext.getBean(LLMService.class);
-            String llmResult = llmService.testConnection();
-            result.append("✅ ").append(llmResult).append("\n\n");
+            result.append("✅ ").append(llmService.testConnection()).append("\n\n");
         } catch (Exception e) {
-            result.append("❌ LLM Error: ").append(e.getMessage()).append("\n\n");
+            result.append("❌ LLM Service Error: ").append(e.getMessage()).append("\n\n");
         }
-        
+
         // Test Embedding Service
         result.append("🔢 Embedding Model Test:\n");
         try {
             EmbeddingService embeddingService = applicationContext.getBean(EmbeddingService.class);
-            String embeddingResult = embeddingService.testConnection();
-            result.append("✅ ").append(embeddingResult).append("\n\n");
+            result.append("✅ ").append(embeddingService.testConnection()).append("\n\n");
         } catch (Exception e) {
-            result.append("❌ Embedding Error: ").append(e.getMessage()).append("\n\n");
+            result.append("❌ Embedding Service Error: ").append(e.getMessage()).append("\n\n");
         }
-        
+
         result.append("Test completed. Check results above for any issues.");
         return result.toString();
     }
