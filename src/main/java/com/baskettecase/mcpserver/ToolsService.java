@@ -62,7 +62,7 @@ public class ToolsService {
 	 * @param customerId The customer ID to search for
 	 * @return Customer information including contact details and address
 	 */
-	@Tool(description = "Query customer information by customer ID. Returns customer contact details and address.")
+	@Tool(description = "Retrieves detailed information for a specific customer, including their name, contact details like email or phone, and address. Use this tool when asked to find, get, or look up a customer's data. Not data found within a policy")
 	public String queryCustomer(Integer customerId) {
 		if (customerId == null) {
 			return "Error: Customer ID cannot be null";
@@ -108,7 +108,7 @@ public class ToolsService {
 	 * @param customerId The customer ID for document filtering (refnum1 or refnum2)
 	 * @return Formatted answer with source document information
 	 */
-	@Tool(description = "Answer insurance policy questions using Spring AI RAG pipeline. Searches customer-specific documents and generates intelligent answers.")
+	@Tool(description = "MUST be used to answer ANY question about a user's specific insurance policy details, coverages, declarations, limits, or endorsements. This is the ONLY source for policy information. Also use for ALL follow-up questions (e.g., 'what about that?', 'does it include...', 'tell me more'), as the tool will use the conversation context to find the relevant information. for instnace, if you show policy information and they ask about something after that there is a great chance they are asking a follow up question. Do NOT use general knowledge for policy questions, unless it is asking about the meaning of a word or phrase.  You may interpret the language of the policy to help the user understand")
 	public String answerQuestion(String question, Integer customerId) {
 		return ragService.answerQuestion(question, customerId);
 	}
@@ -117,33 +117,33 @@ public class ToolsService {
 	 * Test basic database connectivity and tool registration
 	 * @return Status of database connectivity and available customers
 	 */
-	@Tool(description = "Test database connectivity and show available customer IDs for testing")
-	public String testDatabase() {
-		StringBuilder result = new StringBuilder();
-		result.append("=== Database Connectivity Test ===\n\n");
+	// @Tool(description = "Test database connectivity and show available customer IDs for testing")
+	// public String testDatabase() {
+	// 	StringBuilder result = new StringBuilder();
+	// 	result.append("=== Database Connectivity Test ===\n\n");
 		
-		try {
-			long customerCount = customerRepository.count();
-			result.append("✅ Database connection successful\n");
-			result.append("📊 Total customers in database: ").append(customerCount).append("\n\n");
+	// 	try {
+	// 		long customerCount = customerRepository.count();
+	// 		result.append("✅ Database connection successful\n");
+	// 		result.append("📊 Total customers in database: ").append(customerCount).append("\n\n");
 			
-			if (customerCount > 0) {
-				result.append("🔍 Sample customer IDs for testing:\n");
-				customerRepository.findAll().stream()
-					.limit(5)
-					.forEach(customer -> 
-						result.append("  - Customer ID: ").append(customer.getCustomerId())
-							.append(" (Name: ").append(customer.getFirstName())
-							.append(" ").append(customer.getLastName()).append(")\n")
-					);
-			}
+	// 		if (customerCount > 0) {
+	// 			result.append("🔍 Sample customer IDs for testing:\n");
+	// 			customerRepository.findAll().stream()
+	// 				.limit(5)
+	// 				.forEach(customer -> 
+	// 					result.append("  - Customer ID: ").append(customer.getCustomerId())
+	// 						.append(" (Name: ").append(customer.getFirstName())
+	// 						.append(" ").append(customer.getLastName()).append(")\n")
+	// 				);
+	// 		}
 			
-			result.append("\n✅ Database test completed successfully.");
-		} catch (Exception e) {
-			result.append("❌ Database Error: ").append(e.getMessage());
-		}
+	// 		result.append("\n✅ Database test completed successfully.");
+	// 	} catch (Exception e) {
+	// 		result.append("❌ Database Error: ").append(e.getMessage());
+	// 	}
 		
-		return result.toString();
-	}
+	// 	return result.toString();
+	//}
 
 }

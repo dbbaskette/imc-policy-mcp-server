@@ -71,6 +71,18 @@ public class SpringAIRAGService {
     private org.springframework.context.ApplicationContext applicationContext;
     
     /**
+     * ChatModel for testing purposes - when injected, this is used instead of ApplicationContext
+     */
+    private org.springframework.ai.chat.model.ChatModel chatModel;
+    
+    /**
+     * Setter for ChatModel (used in tests)
+     */
+    public void setChatModel(org.springframework.ai.chat.model.ChatModel chatModel) {
+        this.chatModel = chatModel;
+    }
+    
+    /**
      * 🎯 Answer insurance policy questions using RAG pipeline
      * 
      * <p>This method implements the complete RAG workflow using Spring AI components:</p>
@@ -311,15 +323,17 @@ public class SpringAIRAGService {
         logger.debug("📝 Final prompt length: {} characters", prompt.length());
         
         // Get ChatModel lazily to avoid circular dependency
-        logger.info("🔧 Getting ChatModel from ApplicationContext...");
-        org.springframework.ai.chat.model.ChatModel chatModel = applicationContext.getBean(org.springframework.ai.chat.model.ChatModel.class);
-        logger.info("✅ ChatModel obtained: {}", chatModel.getClass().getSimpleName());
+        logger.info("🔧 Getting ChatModel...");
+        org.springframework.ai.chat.model.ChatModel resolvedChatModel = this.chatModel != null 
+            ? this.chatModel 
+            : applicationContext.getBean(org.springframework.ai.chat.model.ChatModel.class);
+        logger.info("✅ ChatModel obtained: {}", resolvedChatModel.getClass().getSimpleName());
         logger.info("🤖 Calling LLM for answer generation...");
         logger.debug("📝 Sending prompt to LLM:\n{}", prompt);
         
         String answer;
         try {
-            answer = ChatClient.create(chatModel)
+            answer = ChatClient.create(resolvedChatModel)
                 .prompt()
                 .user(prompt)
                 .call()
