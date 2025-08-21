@@ -128,6 +128,9 @@ public class LLMService {
             - Provide clear, helpful explanations using simple language
             - Reference specific policy details when available
             - Do not make assumptions or add information not in the context
+            - Don't include any reference to Document numbers
+            - If the context has insurance specific terms (any terms that are only found in the context of an insurance policy),
+              use the queryInformation tool to replace the terms before returning the answer.
             
             Context:
             {context}

@@ -104,6 +104,8 @@ public class ToolsService {
 	 * @param customerId The customer ID for document filtering (refnum1 or refnum2)
 	 * @return Formatted answer with source document information
 	 */
+
+	// ORIGINAL BEFORE I TRIED DAISY CHAINING
 	@Tool(description = "MUST be used to answer ANY question about a user's specific insurance policy details, coverages, declarations, limits, or endorsements. This is the ONLY source for policy information. Also use for ALL follow-up questions (e.g., 'what about that?', 'does it include...', 'tell me more'), as the tool will use the conversation context to find the relevant information. for instnace, if you show policy information and they ask about something after that there is a great chance they are asking a follow up question. Do NOT use general knowledge for policy questions, unless it is asking about the meaning of a word or phrase.  You may interpret the language of the policy to help the user understand")
 	public String answerQuestion(String question, Integer customerId) {
 		return ragService.answerQuestion(question, customerId);
