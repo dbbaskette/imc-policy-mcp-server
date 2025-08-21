@@ -20,6 +20,7 @@ import java.util.Optional;
  * <ul>
  *   <li>👤 {@link #queryCustomer(Integer)} - Retrieve customer information by ID</li>
  *   <li>🧠 {@link #answerQuestion(String, Integer)} - Answer questions using RAG pipeline with policy documents</li>
+ *   <li>📚 {@link #queryInformation(String)} - Query information documents for terms, legalese, and contract concepts</li>
  *   <li>🗄️ {@link #testDatabase()} - Test database connectivity and show sample data</li>
  * </ul>
  * 
@@ -86,10 +87,8 @@ public class ToolsService {
 			customer.getState(),
 			customer.getZipCode());
 	}
-
 	/**
 	 * 🧠 Answer questions using Spring AI RAG pipeline
-	 * 
 	 * <p>This tool uses Spring AI's native RAG capabilities to find relevant policy documents
 	 * for the specified customer and generates intelligent answers using ChatClient.</p>
 	 * 
@@ -100,10 +99,7 @@ public class ToolsService {
 	 *   <li>🤖 ChatClient integration for answer generation</li>
 	 *   <li>📊 Built-in context management and prompt engineering</li>
 	 * </ul>
-	 * 
-	 * <h3>Pipeline:</h3>
 	 * <pre>Question → VectorStore Search → Context → ChatClient → Answer</pre>
-	 * 
 	 * @param question The question to answer about insurance policies
 	 * @param customerId The customer ID for document filtering (refnum1 or refnum2)
 	 * @return Formatted answer with source document information
@@ -111,6 +107,28 @@ public class ToolsService {
 	@Tool(description = "MUST be used to answer ANY question about a user's specific insurance policy details, coverages, declarations, limits, or endorsements. This is the ONLY source for policy information. Also use for ALL follow-up questions (e.g., 'what about that?', 'does it include...', 'tell me more'), as the tool will use the conversation context to find the relevant information. for instnace, if you show policy information and they ask about something after that there is a great chance they are asking a follow up question. Do NOT use general knowledge for policy questions, unless it is asking about the meaning of a word or phrase.  You may interpret the language of the policy to help the user understand")
 	public String answerQuestion(String question, Integer customerId) {
 		return ragService.answerQuestion(question, customerId);
+	}
+
+	/**
+	 * 📚 Query information documents for terms, legalese, and contract concepts
+	 * <p>This tool uses Spring AI's RAG capabilities to find relevant information documents
+	 * that explain insurance terms, legal concepts, and contract language. It filters results
+	 * to only include documents with doctype=information in the metadata.</p>
+	 * 
+	 * <h3>Use Cases:</h3>
+	 * <ul>
+	 *   <li>🔍 Understanding insurance terminology and definitions</li>
+	 *   <li>📖 Explaining legal concepts found in policy documents</li>
+	 *   <li>💡 Clarifying contract language and clauses</li>
+	 *   <li>🎯 Finding user-friendly explanations of complex terms</li>
+	 * </ul>
+	 * 
+	 * @param question Question about insurance terms, legal concepts, or contract language
+	 * @return Formatted answer with source information document details
+	 */
+	@Tool(description = "Retrieves user friendly information about terms, legalese, contract info that a user might find in a Policy Document, like What is an Act of God. This tool searches information documents (doctype=information) to provide clear explanations of insurance terminology, legal concepts, and contract language. Use this tool when returning information to a user so that it is clear and easy to understand.")
+	public String queryInformation(String question) {
+		return ragService.queryInformation(question);
 	}
 
 	/**

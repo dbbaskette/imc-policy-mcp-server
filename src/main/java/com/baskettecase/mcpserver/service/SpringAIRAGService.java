@@ -148,6 +148,67 @@ public class SpringAIRAGService {
             );
         }
     }
+
+    /**
+     * 📚 Query information documents for terms, legalese, and contract concepts
+     * 
+     * <p>This method implements RAG workflow specifically for information documents that
+     * explain insurance terms, legal concepts, and contract language. It filters results
+     * to only include documents with doctype=information in the metadata.</p>
+     * 
+     * <h3>Information Document Types:</h3>
+     * <ul>
+     *   <li>🔍 Insurance terminology and definitions</li>
+     *   <li>📖 Legal concept explanations</li>
+     *   <li>💡 Contract language clarifications</li>
+     *   <li>🎯 User-friendly explanations of complex terms</li>
+     * </ul>
+     * 
+     * @param question Question about insurance terms, legal concepts, or contract language
+     * @return Formatted answer with source information document details
+     */
+    public String queryInformation(String question) {
+        logger.info("📚 Processing information query - question: '{}'", question);
+        
+        try {
+            // Step 1: Validate inputs
+            if (question == null || question.trim().isEmpty()) {
+                logger.warn("⚠️ Invalid question parameter: '{}'", question);
+                return "❌ Error: Question cannot be empty";
+            }
+            
+            logger.info("✅ Input validation passed - question: '{}'", question);
+            
+            // Step 2: Retrieve relevant information documents (doctype=information)
+            List<Document> relevantDocs = retrieveInformationDocuments(question);
+            
+            if (relevantDocs.isEmpty()) {
+                logger.warn("⚠️ No relevant information documents found for question: {}", question);
+                return "⚠️ No relevant information documents found for your question.\n" +
+                       "Please try rephrasing your question or contact support for assistance.";
+            }
+            
+            // Step 3: Build context from retrieved documents
+            String context = buildInformationDocumentContext(relevantDocs);
+            logger.info("📄 Built context from {} information documents", relevantDocs.size());
+            logger.debug("📝 Information document context content:\n{}", context);
+            
+            // Step 4: Generate answer using ChatClient with context
+            logger.info("🚀 Generating answer using LLM with {} information documents as context", relevantDocs.size());
+            String answer = generateInformationAnswer(question, context);
+            
+            // Step 5: Format response with metadata
+            return formatInformationResponse(question, answer, relevantDocs);
+            
+        } catch (Exception e) {
+            logger.error("❌ Information query RAG pipeline error: {}", e.getMessage(), e);
+            return String.format(
+                "❌ Error processing your information question: %s\n" +
+                "Please try again or contact support if the issue persists.", 
+                e.getMessage()
+            );
+        }
+    }
     
     /**
      * 🔍 Retrieve customer-specific documents from vector store
@@ -265,6 +326,54 @@ public class SpringAIRAGService {
             return List.of();
         }
     }
+
+    /**
+     * 🔍 Retrieve information documents from vector store
+     * 
+     * <p>Uses Spring AI's SearchRequest to find documents with doctype=information.
+     * This method is specifically for information documents that explain insurance terms,
+     * legal concepts, and contract language.</p>
+     * 
+     * @param question User question for similarity search
+     * @return List of relevant information documents
+     */
+    private List<Document> retrieveInformationDocuments(String question) {
+        try {
+            logger.info("🔍 Starting information document retrieval with question: '{}'", question);
+            
+            // Create a search request for information documents
+            SearchRequest searchRequest = SearchRequest.builder()
+                .query(question)
+                .topK(maxResults)
+                .similarityThreshold(similarityThreshold)
+                .filterExpression(new FilterExpressionBuilder().eq("doctype", "information").build())
+                .build();
+            
+            logger.info("🤖 Calling embedding model for information document search...");
+            List<Document> results = vectorStore.similaritySearch(searchRequest);
+            if (results == null) results = List.of();
+            
+            logger.info("📈 Information document search returned {} results", results.size());
+            
+            // Log details of information document results
+            for (int i = 0; i < results.size(); i++) {
+                Document doc = results.get(i);
+                String docText = doc.getText();
+                String preview = (docText != null && !docText.isEmpty()) ? 
+                    docText.substring(0, Math.min(100, docText.length())) + "..." : "[no content]";
+                logger.info("📄 Information document result {}: ID={}, doctype={}, preview='{}'", 
+                    i+1, doc.getId(), 
+                    doc.getMetadata().get("doctype"),
+                    preview);
+            }
+            
+            return results;
+            
+        } catch (Exception e) {
+            logger.error("❌ Error retrieving information documents: {}", e.getMessage(), e);
+            return List.of();
+        }
+    }
     
     /**
      * 📄 Build context string from retrieved documents
@@ -278,6 +387,28 @@ public class SpringAIRAGService {
     private String buildDocumentContext(List<Document> documents) {
         StringBuilder context = new StringBuilder();
         context.append("INSURANCE POLICY CONTEXT DOCUMENTS:\n\n");
+        
+        for (int i = 0; i < documents.size(); i++) {
+            Document doc = documents.get(i);
+            context.append("Document ").append(i + 1).append(":\n");
+            context.append(doc.getText()).append("\n\n");
+        }
+        
+        return context.toString();
+    }
+
+    /**
+     * 📄 Build context string from retrieved information documents
+     * 
+     * <p>Combines document content into a formatted context string for the LLM.
+     * Each document is numbered and clearly separated.</p>
+     * 
+     * @param documents Retrieved information documents from vector store
+     * @return Formatted context string for LLM prompt
+     */
+    private String buildInformationDocumentContext(List<Document> documents) {
+        StringBuilder context = new StringBuilder();
+        context.append("INSURANCE INFORMATION DOCUMENTS:\n\n");
         
         for (int i = 0; i < documents.size(); i++) {
             Document doc = documents.get(i);
@@ -349,6 +480,68 @@ public class SpringAIRAGService {
         
         return answer;
     }
+
+    /**
+     * 🤖 Generate contextual answer using ChatClient for information documents
+     * 
+     * <p>Uses Spring AI ChatClient to generate an answer based on the provided context.
+     * The prompt instructs the model to use only the provided context.</p>
+     * 
+     * @param question Original user question
+     * @param context Document context from vector search
+     * @return Generated answer from ChatClient
+     */
+    private String generateInformationAnswer(String question, String context) {
+        logger.info("🤖 Generating information answer using ChatClient...");
+        logger.debug("📝 Context length: {} characters", context.length());
+        
+        String prompt = """
+            You are an expert insurance assistant. Answer the customer's question based ONLY on the provided information documents.
+            
+            RULES:
+            1. Use only information from the provided context documents
+            2. If the context doesn't contain enough information, say so clearly
+            3. Be concise but comprehensive
+            4. Use insurance terminology appropriately
+            5. If multiple documents are relevant, synthesize the information
+            
+            %s
+            
+            CUSTOMER QUESTION:
+            %s
+            
+            ANSWER:
+            """.formatted(context, question);
+        
+        logger.debug("📝 Final prompt length: {} characters", prompt.length());
+        
+        // Get ChatModel lazily to avoid circular dependency
+        logger.info("🔧 Getting ChatModel...");
+        org.springframework.ai.chat.model.ChatModel resolvedChatModel = this.chatModel != null 
+            ? this.chatModel 
+            : applicationContext.getBean(org.springframework.ai.chat.model.ChatModel.class);
+        logger.info("✅ ChatModel obtained: {}", resolvedChatModel.getClass().getSimpleName());
+        logger.info("🤖 Calling LLM for answer generation...");
+        logger.debug("📝 Sending prompt to LLM:\n{}", prompt);
+        
+        String answer;
+        try {
+            answer = ChatClient.create(resolvedChatModel)
+                .prompt()
+                .user(prompt)
+                .call()
+                .content();
+            
+            logger.info("✅ LLM response received successfully, length: {} characters", answer != null ? answer.length() : 0);
+            logger.info("💬 Full LLM Answer: {}", answer);
+            
+        } catch (Exception e) {
+            logger.error("❌ Error calling LLM: {}", e.getMessage(), e);
+            answer = "❌ Error generating answer: " + e.getMessage();
+        }
+        
+        return answer;
+    }
     
     /**
      * 📊 Format final response with metadata
@@ -366,6 +559,48 @@ public class SpringAIRAGService {
         StringBuilder response = new StringBuilder();
         response.append("=== Insurance Policy Assistant ===\n\n");
         response.append("👤 Customer ID: ").append(customerId).append("\n");
+        response.append("❓ Question: ").append(question).append("\n\n");
+        response.append("🤖 Answer:\n").append(answer).append("\n\n");
+        response.append("📊 Search Results:\n");
+        response.append("  - Documents Found: ").append(documents.size()).append("\n");
+        response.append("  - Similarity Threshold: ").append(similarityThreshold).append("\n");
+        response.append("  - Max Results: ").append(maxResults).append("\n\n");
+        
+        if (!documents.isEmpty()) {
+            response.append("📄 Source Documents:\n");
+            for (int i = 0; i < documents.size(); i++) {
+                Document doc = documents.get(i);
+                response.append("  ").append(i + 1).append(". ID: ").append(doc.getId()).append("\n");
+                
+                // Show preview of document content
+                String content = doc.getText();
+                String preview = (content != null && content.length() > 200) ? 
+                    content.substring(0, 200) + "..." : (content != null ? content : "");
+                response.append("     Preview: ").append(preview.replace("\n", " ")).append("\n");
+                
+                // Show metadata
+                response.append("     Metadata: ").append(doc.getMetadata()).append("\n\n");
+            }
+        }
+        
+        response.append("⏰ Powered by Spring AI RAG Pipeline");
+        return response.toString();
+    }
+
+    /**
+     * 📊 Format final response with metadata for information documents
+     * 
+     * <p>Creates a structured response including the answer, source information,
+     * and metadata about the RAG operation.</p>
+     * 
+     * @param question Original question
+     * @param answer Generated answer
+     * @param documents Source documents
+     * @return Formatted response string
+     */
+    private String formatInformationResponse(String question, String answer, List<Document> documents) {
+        StringBuilder response = new StringBuilder();
+        response.append("=== Insurance Policy Information Assistant ===\n\n");
         response.append("❓ Question: ").append(question).append("\n\n");
         response.append("🤖 Answer:\n").append(answer).append("\n\n");
         response.append("📊 Search Results:\n");

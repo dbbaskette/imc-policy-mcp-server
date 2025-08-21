@@ -98,30 +98,87 @@ class SpringAIRAGServiceTest {
     @DisplayName("VectorStore Integration Tests")
     @Test
     void testVectorStoreSearch_success() {
-        // Given
-        String question = "What does my policy cover?";
-        Integer customerId = 100001;
+        // Mock document retrieval
+        Document doc1 = new Document("First policy section...", Map.of("refnum1", 100001, "refnum2", 200001));
+        Document doc2 = new Document("Second policy section...", Map.of("refnum1", 100001, "refnum2", 200001));
+        List<Document> mockDocs = Arrays.asList(doc1, doc2);
         
-        Document mockDoc = new Document("Test policy content");
-        mockDoc.getMetadata().put("refnum1", 100001);
+        // Mock vector store search
+        when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockDocs);
         
-        when(vectorStore.similaritySearch(any(SearchRequest.class)))
-            .thenReturn(Arrays.asList(mockDoc));
-        when(callResponseSpec.content()).thenReturn("Your policy covers comprehensive insurance.");
-
+        // Mock ChatClient response
+        when(callResponseSpec.content()).thenReturn("Context-based answer");
+        
         // Use static mocking for ChatClient.create()
         try (MockedStatic<ChatClient> mockedChatClient = mockStatic(ChatClient.class)) {
             mockedChatClient.when(() -> ChatClient.create(any(org.springframework.ai.chat.model.ChatModel.class)))
                     .thenReturn(chatClient);
-
-            // When
-            String result = ragService.answerQuestion(question, customerId);
-
-            // Then
-            assertTrue(result.contains("Your policy covers comprehensive insurance"));
-            verify(vectorStore, times(2)).similaritySearch(any(SearchRequest.class)); // Unfiltered + filtered search
-            verify(chatClient).prompt();
+            
+            String result = ragService.answerQuestion("Context test", 100001);
+            
+            assertNotNull(result);
+            assertTrue(result.contains("Context-based answer"));
+            assertTrue(result.contains("Documents Found: 2"));
         }
+    }
+
+    @DisplayName("Information Document Query Tests")
+    @Test
+    void testQueryInformation_success() {
+        // Mock information document retrieval
+        Document infoDoc1 = new Document("Act of God: An event that is caused by natural forces and cannot be prevented or controlled by human intervention.", 
+            Map.of("doctype", "information", "category", "legal_terms"));
+        Document infoDoc2 = new Document("Deductible: The amount of money you must pay out of pocket before your insurance coverage begins.", 
+            Map.of("doctype", "information", "category", "insurance_terms"));
+        List<Document> mockInfoDocs = Arrays.asList(infoDoc1, infoDoc2);
+        
+        // Mock vector store search for information documents
+        when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(mockInfoDocs);
+        
+        // Mock ChatClient response
+        when(callResponseSpec.content()).thenReturn("An Act of God is an event caused by natural forces that cannot be prevented or controlled by human intervention.");
+        
+        // Use static mocking for ChatClient.create()
+        try (MockedStatic<ChatClient> mockedChatClient = mockStatic(ChatClient.class)) {
+            mockedChatClient.when(() -> ChatClient.create(any(org.springframework.ai.chat.model.ChatModel.class)))
+                    .thenReturn(chatClient);
+            
+            String result = ragService.queryInformation("What is an Act of God?");
+            
+            assertNotNull(result);
+            assertTrue(result.contains("An Act of God is an event caused by natural forces"));
+            assertTrue(result.contains("Documents Found: 2"));
+            assertTrue(result.contains("=== Insurance Policy Information Assistant ==="));
+        }
+    }
+
+    @DisplayName("Information Document Query - No Results")
+    @Test
+    void testQueryInformation_noResults() {
+        // Mock empty results for information documents
+        when(vectorStore.similaritySearch(any(SearchRequest.class))).thenReturn(Collections.emptyList());
+        
+        String result = ragService.queryInformation("What is a non-existent term?");
+        
+        assertNotNull(result);
+        assertTrue(result.contains("⚠️ No relevant information documents found"));
+        assertTrue(result.contains("Please try rephrasing your question"));
+    }
+
+    @DisplayName("Information Document Query - Invalid Input")
+    @Test
+    void testQueryInformation_invalidInput() {
+        // Test null question
+        String result1 = ragService.queryInformation(null);
+        assertTrue(result1.contains("❌ Error: Question cannot be empty"));
+        
+        // Test empty question
+        String result2 = ragService.queryInformation("");
+        assertTrue(result2.contains("❌ Error: Question cannot be empty"));
+        
+        // Test whitespace-only question
+        String result3 = ragService.queryInformation("   ");
+        assertTrue(result3.contains("❌ Error: Question cannot be empty"));
     }
 
     @Test
