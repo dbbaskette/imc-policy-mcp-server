@@ -79,6 +79,46 @@
 			<groupId>org.springframework.ai</groupId>
 			<artifactId>spring-ai-vector-store</artifactId>
 		</dependency>
+		
+		<!-- Spring AI Tika Document Reader for PDF processing -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-tika-document-reader</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>*</groupId>
+					<artifactId>*</artifactId>
+				</exclusion>
+			</exclusions>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Spring AI TokenTextSplitter for text chunking -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-transformers</artifactId>
+			<exclusions>
+				<exclusion>
+					<groupId>*</groupId>
+					<artifactId>*</artifactId>
+				</exclusion>
+			</exclusions>
+			<optional>true</optional>
+		</dependency>
+
+		<!-- Explicit dependency on latest java-cfenv-boot for multi-modal service support -->
+		<dependency>
+			<groupId>io.pivotal.cfenv</groupId>
+			<artifactId>java-cfenv-boot</artifactId>
+			<version>3.5.0</version>
+		</dependency>
+
+		<!-- Tanzu GenAI specific cfenv support for automatic configuration -->
+		<dependency>
+			<groupId>io.pivotal.cfenv</groupId>
+			<artifactId>java-cfenv-boot-tanzu-genai</artifactId>
+			<version>3.5.0</version>
+		</dependency>
 	</dependencies>
 
 	<dependencyManagement>
@@ -122,6 +162,7 @@
 			</snapshots>
 		</repository>
 	</repositories>
+
 
 	<build>
 		<plugins>

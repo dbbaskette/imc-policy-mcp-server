@@ -56,6 +56,44 @@ public class McpToolService {
         }
     }
 
+    /**
+     * Debug tool to test vector search with different similarity thresholds.
+     */
+    @McpTool(name = "debugSearch", 
+             description = "Debug vector search with adjustable similarity threshold for troubleshooting",
+             annotations = @McpTool.McpAnnotations(
+                 title = "Vector Search Debug Tool",
+                 readOnlyHint = true,
+                 destructiveHint = false,
+                 idempotentHint = true
+             ))
+    public DebugSearchResult debugSearch(
+            @McpToolParam(description = "Search query", required = true) 
+            String query,
+            @McpToolParam(description = "Customer ID to filter policy documents", required = true) 
+            Integer customerId,
+            @McpToolParam(description = "Similarity threshold (0.0-1.0)", required = false) 
+            Double threshold) {
+        
+        logger.info("MCP Tool: debugSearch called with customerId={}, query='{}', threshold={}", 
+                   customerId, query, threshold);
+        
+        try {
+            if (!StringUtils.hasText(query)) return DebugSearchResult.error("Query cannot be empty");
+            if (customerId == null) return DebugSearchResult.error("Customer ID is required");
+            
+            double searchThreshold = threshold != null ? threshold : 0.1; // Lower default for debugging
+            
+            String result = ragService.debugSearch(query, customerId, searchThreshold);
+            
+            return DebugSearchResult.success(query, customerId, searchThreshold, result);
+            
+        } catch (Exception e) {
+            logger.error("MCP Tool: Debug search failed for customer {}: {}", customerId, e.getMessage(), e);
+            return DebugSearchResult.error("Failed to process debug search: " + e.getMessage());
+        }
+    }
+
     // TODO: Future customer data retrieval tool
     /*
     @McpTool(name = "queryCustomer", 
@@ -100,11 +138,11 @@ public class McpToolService {
         }
 
         public static PolicyQueryResult success(String query, Integer customerId, String context, long processingTimeMs) {
-            return new PolicyQueryResult(true, query, customerId, context, processingTimeMs, null);
+            return new PolicyQueryResult(true, query, customerId, context, processingTimeMs, "");
         }
 
         public static PolicyQueryResult error(String error) {
-            return new PolicyQueryResult(false, null, null, null, null, error);
+            return new PolicyQueryResult(false, null, null, null, null, error != null ? error : "Unknown error");
         }
 
         // Getters
@@ -113,6 +151,47 @@ public class McpToolService {
         public Integer getCustomerId() { return customerId; }
         public String getContext() { return context; }
         public Long getProcessingTimeMs() { return processingTimeMs; }
+        public String getError() { return error; }
+        public long getTimestamp() { return timestamp; }
+    }
+
+    /**
+     * Debug search result.
+     */
+    public static class DebugSearchResult {
+        private final boolean success;
+        private final String query;
+        private final Integer customerId;
+        private final Double threshold;
+        private final String result;
+        private final String error;
+        private final long timestamp;
+
+        private DebugSearchResult(boolean success, String query, Integer customerId, 
+                                Double threshold, String result, String error) {
+            this.success = success;
+            this.query = query;
+            this.customerId = customerId;
+            this.threshold = threshold;
+            this.result = result;
+            this.error = error;
+            this.timestamp = System.currentTimeMillis();
+        }
+
+        public static DebugSearchResult success(String query, Integer customerId, Double threshold, String result) {
+            return new DebugSearchResult(true, query, customerId, threshold, result, null);
+        }
+
+        public static DebugSearchResult error(String error) {
+            return new DebugSearchResult(false, null, null, null, null, error);
+        }
+
+        // Getters
+        public boolean isSuccess() { return success; }
+        public String getQuery() { return query; }
+        public Integer getCustomerId() { return customerId; }
+        public Double getThreshold() { return threshold; }
+        public String getResult() { return result; }
         public String getError() { return error; }
         public long getTimestamp() { return timestamp; }
     }

@@ -7,6 +7,7 @@
 [![Java](https://img.shields.io/badge/Java-21-orange?style=for-the-badge&logo=openjdk)](https://openjdk.org/)
 [![PGVector](https://img.shields.io/badge/PGVector-0.1.6-blue?style=for-the-badge&logo=postgresql)](https://github.com/pgvector/pgvector)
 [![MCP](https://img.shields.io/badge/MCP-Server-purple?style=for-the-badge)](https://modelcontextprotocol.io/)
+[![Apache Tika](https://img.shields.io/badge/Apache%20Tika-PDF-red?style=for-the-badge&logo=apache)](https://tika.apache.org/)
 
 **🚀 Enterprise-Grade RAG-Powered Insurance Policy Document Retrieval via Model Context Protocol**
 
@@ -67,6 +68,9 @@ graph TB
 | 📊 **PGVector Integration** | High-performance vector similarity search | ✅ HNSW Index |
 | 🔧 **MCP Tool Exposure** | Standards-compliant tool interface | ✅ @McpTool |
 | 🚀 **Auto-Configuration** | Zero-config Spring Boot setup | ✅ Environment Aware |
+| 📄 **PDF ETL Pipeline** | Automated PDF processing with Tika and chunking | ✅ NEW |
+| 🔄 **Re-Embedding Service** | Update embeddings with new models | ✅ NEW |
+| 🔍 **Debug & Diagnostics** | Enhanced debugging and search testing tools | ✅ NEW |
 
 ### 🛡️ Enterprise Features
 
@@ -129,6 +133,9 @@ graph TB
 | **Query Transformers** | Spring AI | RewriteQueryTransformer + MultiQueryExpander |
 | **VectorStore** | PGVector | 768-dimension embeddings with HNSW index |
 | **DataLoaderService** | Spring Boot | CSV ingestion with validation and error handling |
+| **RagEtlService** | Spring AI Tika | PDF processing and document chunking |
+| **ReEmbeddingService** | Spring AI | Re-embed documents with new models |
+| **DiagnosticController** | Spring MVC | Debug and troubleshooting endpoints |
 
 ---
 
@@ -232,6 +239,45 @@ RAG_TOP_K=5
 RAG_SIMILARITY_THRESHOLD=0.7
 RAG_QUERY_REWRITE=true
 ```
+
+---
+
+## 📄 PDF ETL Pipeline (NEW)
+
+The application now includes a powerful ETL pipeline for processing PDF documents:
+
+### Features
+- **Automated PDF Processing**: Uses Apache Tika for robust PDF extraction
+- **Intelligent Chunking**: TokenTextSplitter for optimal document segmentation
+- **Customer Mapping**: Automatically extracts customer IDs from filenames (format: `{customerId}-{policyId}.pdf`)
+- **Batch Processing**: Efficient batch loading into vector store
+
+### Usage
+Place PDF files in `local_data/source/` directory with naming convention:
+- `100001-200001.pdf` - Customer ID: 100001, Policy ID: 200001
+- Files are automatically processed on startup when enabled
+
+### Configuration
+```yaml
+# Enable/disable PDF ETL on startup
+app.etl.enabled: false
+app.etl.source-directory: local_data/source
+```
+
+---
+
+## 🔄 Re-Embedding Service (NEW)
+
+Update existing document embeddings when switching embedding models:
+
+### Features
+- **Model Migration**: Seamlessly update embeddings when changing models
+- **Backup & Restore**: Automatic CSV backup before re-embedding
+- **Progress Tracking**: Real-time progress logging
+- **Batch Processing**: Efficient re-embedding in batches
+
+### Usage
+The service automatically detects when re-embedding is needed and can be triggered manually via command line runner.
 
 ---
 
@@ -442,6 +488,16 @@ curl "http://localhost:8080/api/test/rag?query=Coverage details&customerId=10000
 | `/api/test/rag/info` | GET | Get RAG service configuration |
 | `/api/test/health` | GET | Test controller health check |
 | `/api/test/samples` | GET | Get sample queries and customer IDs |
+| `/api/test/rag/debug` | GET | Debug search with custom thresholds |
+| `/api/test/rag/direct` | GET | Direct vector search without transformations |
+
+### 🔍 Diagnostic Endpoints (Local Profile Only)
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/diagnostic/customer/{id}` | GET | Check documents for specific customer |
+| `/api/diagnostic/search` | GET | Search documents by keyword |
+| `/api/diagnostic/stats` | GET | Get vector store statistics |
 
 ---
 

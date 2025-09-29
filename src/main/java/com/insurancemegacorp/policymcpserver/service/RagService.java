@@ -138,6 +138,110 @@ public class RagService {
     }
 
     /**
+     * Debug search method to test vector similarity with different thresholds.
+     */
+    public String debugSearch(String query, Integer customerId, double threshold) {
+        if (!StringUtils.hasText(query)) throw new IllegalArgumentException("Query cannot be null or empty");
+        if (customerId == null) throw new IllegalArgumentException("Customer ID cannot be null");
+
+        logger.info("DEBUG: Testing vector search for customer {} with query '{}' and threshold {}", 
+                   customerId, query, threshold);
+        
+        try {
+            // Test without query transformations first
+            SearchRequest searchRequest = SearchRequest.builder()
+                    .query(query)
+                    .topK(topK)
+                    .similarityThreshold(threshold)
+                    .filterExpression(new FilterExpressionBuilder().eq("refnum1", customerId).build())
+                    .build();
+
+            List<Document> documents = vectorStore.similaritySearch(searchRequest);
+            
+            logger.info("DEBUG: Found {} documents with threshold {} (original query: '{}')", 
+                       documents.size(), threshold, query);
+
+            StringBuilder result = new StringBuilder();
+            result.append("DEBUG SEARCH RESULTS\n");
+            result.append("====================\n");
+            result.append(String.format("Query: '%s'\n", query));
+            result.append(String.format("Customer ID: %d\n", customerId));
+            result.append(String.format("Similarity Threshold: %.3f\n", threshold));
+            result.append(String.format("Top K: %d\n", topK));
+            result.append(String.format("Documents Found: %d\n\n", documents.size()));
+
+            if (documents.isEmpty()) {
+                result.append("NO DOCUMENTS FOUND\n\n");
+                
+                // Try with lower threshold to see if any documents exist
+                if (threshold > 0.1) {
+                    SearchRequest lowerThresholdRequest = SearchRequest.builder()
+                            .query(query)
+                            .topK(topK)
+                            .similarityThreshold(0.1)
+                            .filterExpression(new FilterExpressionBuilder().eq("refnum1", customerId).build())
+                            .build();
+                    
+                    List<Document> lowerThresholdDocs = vectorStore.similaritySearch(lowerThresholdRequest);
+                    result.append(String.format("With threshold 0.1: %d documents found\n", lowerThresholdDocs.size()));
+                }
+                
+                // Test without customer filter
+                SearchRequest noFilterRequest = SearchRequest.builder()
+                        .query(query)
+                        .topK(5)
+                        .similarityThreshold(threshold)
+                        .build();
+                
+                List<Document> noFilterDocs = vectorStore.similaritySearch(noFilterRequest);
+                result.append(String.format("Without customer filter: %d documents found\n", noFilterDocs.size()));
+                
+            } else {
+                for (int i = 0; i < documents.size(); i++) {
+                    Document doc = documents.get(i);
+                    result.append(String.format("Document %d:\n", i + 1));
+                    // Show full content instead of truncating
+                    result.append(String.format("Content: %s\n", doc.getFormattedContent()));
+                    result.append(String.format("Metadata: %s\n", doc.getMetadata()));
+                    result.append("---\n\n");
+                }
+            }
+
+            return result.toString();
+            
+        } catch (Exception e) {
+            logger.error("DEBUG: Vector search failed: {}", e.getMessage(), e);
+            return "DEBUG SEARCH FAILED: " + e.getMessage();
+        }
+    }
+
+    /**
+     * Simple debug test that bypasses query transformations.
+     */
+    public String testDirectSearch(String query, Integer customerId) {
+        logger.info("DIRECT TEST: Testing basic vector search for customer {} with query '{}'", customerId, query);
+        
+        try {
+            // Direct search with very low threshold
+            SearchRequest directRequest = SearchRequest.builder()
+                    .query(query)
+                    .topK(5)
+                    .similarityThreshold(0.01) // Very low threshold
+                    .filterExpression(new FilterExpressionBuilder().eq("refnum1", customerId).build())
+                    .build();
+
+            List<Document> documents = vectorStore.similaritySearch(directRequest);
+            
+            logger.info("DIRECT TEST: Found {} documents", documents.size());
+            return debugSearch(query, customerId, 0.01);
+            
+        } catch (Exception e) {
+            logger.error("DIRECT TEST: Failed: {}", e.getMessage(), e);
+            return "DIRECT TEST FAILED: " + e.getMessage();
+        }
+    }
+
+    /**
      * Get RAG service configuration info.
      */
     public RagServiceInfo getServiceInfo() {

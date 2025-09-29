@@ -9,6 +9,7 @@ import com.opencsv.exceptions.CsvException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Profile;
@@ -36,11 +37,20 @@ public class DataLoaderService implements CommandLineRunner {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Value("${app.rag.process:false}")
+    private boolean ragProcessingEnabled;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
     private Integer expectedEmbeddingDimension = null;
 
     @Override
     public void run(String... args) throws Exception {
+        // Skip CSV data loading if RAG processing is enabled
+        if (ragProcessingEnabled) {
+            logger.info("RAG processing is enabled - skipping CSV data loading");
+            return;
+        }
+        
         logger.info("Starting data ingestion check for local profile...");
         
         try {

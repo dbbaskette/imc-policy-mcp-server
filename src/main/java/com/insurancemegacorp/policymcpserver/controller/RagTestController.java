@@ -133,10 +133,12 @@ public class RagTestController {
         Map<String, Object> response = new HashMap<>();
         
         // Sample customer IDs from the CSV data (refnum1 values)
-        response.put("sampleCustomerIds", new Integer[]{100003, 100004, 100005});
+        response.put("sampleCustomerIds", new Integer[]{100001, 100002, 100003, 100004});
         
         // Sample queries to test
         response.put("sampleQueries", new String[]{
+                "List all vehicles on policy",
+                "What vehicles are covered",
                 "What is covered under my auto insurance policy?",
                 "What are the definitions in my policy?",
                 "What happens if I get into an accident?",
