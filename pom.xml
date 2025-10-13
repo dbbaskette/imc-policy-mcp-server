@@ -55,7 +55,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-		
+
+		<!-- Thymeleaf for HTML templates -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-thymeleaf</artifactId>
+		</dependency>
+
 		<!-- Spring AI RAG module for advanced RAG functionality -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>

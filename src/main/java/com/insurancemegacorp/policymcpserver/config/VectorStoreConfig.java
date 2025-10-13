@@ -1,6 +1,7 @@
 package com.insurancemegacorp.policymcpserver.config;
 
 import com.insurancemegacorp.policymcpserver.service.CachingVectorStore;
+import com.insurancemegacorp.policymcpserver.service.VectorCacheMetrics;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -38,17 +39,90 @@ public class VectorStoreConfig {
     @Value("${app.vectorstore.table-name:vector_store}")
     private String tableName;
 
+    @Value("${spring.ai.vectorstore.gemfire.host:localhost}")
+    private String gemfireHost;
+
+    @Value("${spring.ai.vectorstore.gemfire.port:8080}")
+    private int gemfirePort;
+
+    @Value("${spring.ai.vectorstore.gemfire.index:spring-ai-gemfire-index}")
+    private String gemfireIndex;
+
+    @Value("${spring.ai.vectorstore.gemfire.username:}")
+    private String gemfireUsername;
+
+    @Value("${spring.ai.vectorstore.gemfire.password:}")
+    private String gemfirePassword;
+
+    /**
+     * Custom RestClient builder for GemFire with Basic Authentication.
+     * Spring AI GemFireVectorStore may use RestClient instead of WebClient.
+     */
+    @Bean
+    @Primary
+    public org.springframework.web.client.RestClient.Builder restClientBuilder() {
+        var builder = org.springframework.web.client.RestClient.builder();
+
+        // Add Basic Auth if GemFire credentials are available
+        if (gemfireUsername != null && !gemfireUsername.isEmpty()) {
+            logger.info("Configuring RestClient with Basic Auth for GemFire (user: {})", gemfireUsername);
+            builder.defaultHeaders(headers -> headers.setBasicAuth(gemfireUsername, gemfirePassword));
+        } else {
+            logger.warn("No GemFire credentials found - cache will not authenticate");
+        }
+
+        return builder;
+    }
+
+    /**
+     * Custom WebClient builder for GemFire with Basic Authentication.
+     * Keeping this in case GemFireVectorStore uses WebClient.
+     */
+    @Bean
+    public org.springframework.web.reactive.function.client.WebClient.Builder webClientBuilder() {
+        var builder = org.springframework.web.reactive.function.client.WebClient.builder();
+
+        // Add Basic Auth if GemFire credentials are available
+        if (gemfireUsername != null && !gemfireUsername.isEmpty()) {
+            logger.info("Configuring WebClient with Basic Auth for GemFire (user: {})", gemfireUsername);
+            builder.defaultHeaders(headers -> headers.setBasicAuth(gemfireUsername, gemfirePassword));
+        }
+
+        return builder;
+    }
+
     /**
      * GemFire vector store for caching.
-     * Uses auto-configuration from Cloud Foundry service binding (imc-cache).
+     * Uses Cloud Foundry service binding (imc-cache) via VCAP_SERVICES.
+     * The host and port are configured through spring.ai.vectorstore.gemfire properties
+     * which should be extracted from the service credentials.
+     *
+     * IMPORTANT: VectorDB must be enabled on the GemFire service for caching to work.
+     * To enable: cf update-service imc-cache -c '{"enable_vector_db": true}'
+     *
+     * With schema initialization disabled, the cache will gracefully fall back to
+     * no-op mode if the index doesn't exist, allowing the app to run with just Postgres.
      */
     @Bean
     @Qualifier("gemfireVectorStore")
     public VectorStore gemfireVectorStore(EmbeddingModel embeddingModel) {
-        logger.info("Configuring GemFire vector store for caching (dimensions={})", embeddingDimensions);
-        
+        logger.info("Configuring GemFire vector store for caching: {}:{} index={} (dimensions={})",
+                   gemfireHost, gemfirePort, gemfireIndex, embeddingDimensions);
+
+        logger.warn("NOTE: GemFire caching requires VectorDB to be enabled on the service.");
+        logger.warn("If not enabled, queries will fall back to Postgres only (no caching).");
+        logger.warn("To enable: cf update-service imc-cache -c '{{\"enable_vector_db\": true}}'");
+
+        // Authentication is configured via the webClientBuilder() bean above
+        // GemFireVectorStore will auto-discover and use the WebClient.Builder bean
+        // with Basic Auth headers if credentials are available
+
         return GemFireVectorStore.builder(embeddingModel)
-                .initializeSchema(true)  // Allow GemFire to create its own schema
+                .host(gemfireHost)
+                .port(gemfirePort)
+                .indexName(gemfireIndex)
+                .sslEnabled(gemfirePort == 443)  // Enable SSL for HTTPS (port 443)
+                .initializeSchema(false)  // Don't initialize - requires VectorDB to be pre-enabled
                 .build();
     }
 
@@ -80,11 +154,12 @@ public class VectorStoreConfig {
     @Primary
     public VectorStore cachingVectorStore(
             @Qualifier("gemfireVectorStore") VectorStore gemfireVectorStore,
-            @Qualifier("postgresVectorStore") VectorStore postgresVectorStore) {
-        
+            @Qualifier("postgresVectorStore") VectorStore postgresVectorStore,
+            VectorCacheMetrics metrics) {
+
         logger.info("Configuring caching vector store with multiplier={}", cacheMultiplier);
-        
-        return new CachingVectorStore(gemfireVectorStore, postgresVectorStore, cacheMultiplier);
+
+        return new CachingVectorStore(gemfireVectorStore, postgresVectorStore, cacheMultiplier, metrics);
     }
 }
 
