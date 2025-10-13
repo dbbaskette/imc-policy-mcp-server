@@ -5,15 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.advisor.vectorstore.QuestionAnswerAdvisor;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.model.ChatModel;
-import org.springframework.ai.embedding.EmbeddingModel;
-import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
-import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE;
-import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * RAG configuration for PGVector store and QuestionAnswerAdvisor.
@@ -45,23 +40,9 @@ public class RagConfiguration {
     // In local development: Uses spring.ai.openai.api-key from application properties
     // In Cloud Foundry: Auto-configured via bound AI services (VCAP_SERVICES)
 
-    /**
-     * Configure PGVector store for document retrieval.
-     */
-    @Bean
-    public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
-        logger.info("Configuring PGVector: table={}, dimensions={}, model={}", 
-                   tableName, embeddingDimensions, embeddingModel.getClass().getSimpleName());
-        
-        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
-                .dimensions(embeddingDimensions)
-                .distanceType(COSINE_DISTANCE)
-                .indexType(HNSW)
-                .initializeSchema(false) // Schema is managed by schema.sql
-                .vectorTableName(tableName)
-                .maxDocumentBatchSize(10000)
-                .build();
-    }
+    // Note: VectorStore configuration has been moved to VectorStoreConfig
+    // which sets up the GemFire caching layer with Postgres as the primary store.
+    // The @Primary CachingVectorStore bean will be auto-injected into services.
 
     // Note: VectorStoreRetriever is not available in Spring AI 1.1.0-SNAPSHOT
     // RagService will use VectorStore.similaritySearch() directly

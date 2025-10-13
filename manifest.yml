@@ -12,3 +12,4 @@ applications:
   services:
     - embed-db
     - multi-modal
+    - imc-cache

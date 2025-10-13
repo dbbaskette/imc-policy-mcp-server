@@ -74,6 +74,12 @@
 			<artifactId>spring-ai-pgvector-store</artifactId>
 		</dependency>
 		
+		<!-- Spring AI GemFire Vector Store for caching -->
+		<dependency>
+			<groupId>org.springframework.ai</groupId>
+			<artifactId>spring-ai-starter-vector-store-gemfire</artifactId>
+		</dependency>
+		
 		<!-- Spring AI Vector Store for VectorStoreRetriever -->
 		<dependency>
 			<groupId>org.springframework.ai</groupId>
