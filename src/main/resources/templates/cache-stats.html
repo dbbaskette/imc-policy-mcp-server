@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GemFire Cache Statistics</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .stats-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: 600;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .metric-value {
+            font-weight: bold;
+            color: #4CAF50;
+            font-size: 1.1em;
+        }
+        .hit-rate {
+            font-size: 1.2em;
+            color: #2196F3;
+        }
+        .section-title {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            color: #666;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.9em;
+        }
+        .refresh-info {
+            text-align: center;
+            color: #999;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+    </style>
+    <script>
+        // Auto-refresh every 5 seconds
+        setTimeout(function(){
+            location.reload();
+        }, 5000);
+    </script>
+</head>
+<body>
+    <h1>🚀 GemFire Vector Cache Statistics</h1>
+
+    <div class="stats-container">
+        <div class="section-title">Cache Performance</div>
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Cache Hit Rate</td>
+                <td class="metric-value hit-rate" th:text="${hitRate}">0%</td>
+            </tr>
+            <tr>
+                <td>Cache Hits</td>
+                <td class="metric-value" th:text="${cacheHits}">0</td>
+            </tr>
+            <tr>
+                <td>Cache Misses</td>
+                <td class="metric-value" th:text="${cacheMisses}">0</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="stats-container">
+        <div class="section-title">Cache Warming</div>
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>Warming Successes</td>
+                <td class="metric-value" th:text="${warmingSuccess}">0</td>
+            </tr>
+            <tr>
+                <td>Warming Failures</td>
+                <td class="metric-value" th:text="${warmingFailures}">0</td>
+            </tr>
+            <tr>
+                <td>Documents Cached</td>
+                <td class="metric-value" th:text="${documentsCached}">0</td>
+            </tr>
+            <tr>
+                <td>Documents Retrieved</td>
+                <td class="metric-value" th:text="${documentsRetrieved}">0</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="stats-container">
+        <div class="section-title">Query Performance</div>
+        <table>
+            <tr>
+                <th>Operation</th>
+                <th>Average Duration</th>
+            </tr>
+            <tr>
+                <td>Cache Query Time</td>
+                <td class="metric-value" th:text="${cacheQueryAvg}">N/A</td>
+            </tr>
+            <tr>
+                <td>Primary Store Query Time</td>
+                <td class="metric-value" th:text="${primaryQueryAvg}">N/A</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="refresh-info">
+        Page auto-refreshes every 5 seconds
+    </div>
+</body>
+</html>
