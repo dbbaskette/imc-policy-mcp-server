@@ -137,4 +137,32 @@ public class VectorCacheMetrics {
         double total = hits + cacheMisses.count();
         return total > 0 ? hits / total : 0.0;
     }
+
+    /**
+     * Get total number of successful warming operations
+     */
+    public long getWarmingSuccesses() {
+        return (long) cacheWarmingSuccess.count();
+    }
+
+    /**
+     * Get total number of documents cached via warming
+     */
+    public long getTotalDocumentsCached() {
+        return (long) documentsCached.count();
+    }
+
+    /**
+     * Get total cache hits
+     */
+    public long getCacheHits() {
+        return (long) cacheHits.count();
+    }
+
+    /**
+     * Get total cache misses
+     */
+    public long getCacheMisses() {
+        return (long) cacheMisses.count();
+    }
 }

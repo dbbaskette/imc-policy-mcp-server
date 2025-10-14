@@ -27,14 +27,17 @@ public class CachingVectorStore implements VectorStore {
     private final VectorStore primary;    // Postgres pgvector
     private final int cacheMultiplier;
     private final VectorCacheMetrics metrics;
+    private final DirectGemFireCacheWarmer directWarmer;
 
     public CachingVectorStore(VectorStore cache, VectorStore primary, int cacheMultiplier,
-                              VectorCacheMetrics metrics) {
+                              VectorCacheMetrics metrics, DirectGemFireCacheWarmer directWarmer) {
         this.cache = cache;
         this.primary = primary;
         this.cacheMultiplier = cacheMultiplier;
         this.metrics = metrics;
+        this.directWarmer = directWarmer;
         logger.info("CachingVectorStore initialized with cache multiplier: {}", cacheMultiplier);
+        logger.info("Direct GemFire cache warmer: {}", directWarmer.isEnabled() ? "ENABLED" : "DISABLED");
     }
 
     @Override
@@ -67,9 +70,10 @@ public class CachingVectorStore implements VectorStore {
         int originalTopK = request.getTopK();
 
         // Try cache first - wrap in try-catch to gracefully fall back to primary if cache fails
+        // GemFire VectorDB now supports filtering via "filter-query" parameter
         List<Document> cachedResult = List.of();
         try {
-            logger.debug("Attempting cache lookup for query: '{}' with topK={}",
+            logger.info("🔍 Attempting cache lookup for query: '{}' with topK={}",
                         request.getQuery(), originalTopK);
 
             long cacheStartTime = System.currentTimeMillis();
@@ -79,48 +83,72 @@ public class CachingVectorStore implements VectorStore {
             metrics.recordCacheQueryTime(cacheEndTime - cacheStartTime);
 
             if (!cachedResult.isEmpty()) {
-                logger.debug("Cache HIT: Found {} documents in cache", cachedResult.size());
+                logger.info("✅ Cache HIT: Found {} documents in cache ({}ms)",
+                           cachedResult.size(), (cacheEndTime - cacheStartTime));
                 metrics.recordCacheHit(cachedResult.size());
                 return cachedResult;
             }
         } catch (Exception e) {
-            logger.warn("Cache query failed (falling back to primary): {}", e.getMessage());
+            logger.warn("⚠️  Cache query failed (falling back to primary): {}", e.getMessage());
             logger.debug("Cache error details", e);
             // Fall through to primary store query
         }
 
-        // Cache miss or error - query primary store with over-fetching
-        logger.debug("Cache MISS or ERROR: Querying primary store with over-fetching");
+        // Cache miss or error - query primary store
+        // NOTE: Over-fetching disabled since cache should provide all needed docs when warmed
+        logger.info("❌ Cache MISS: Querying primary store (topK: {})", originalTopK);
         metrics.recordCacheMiss();
 
-        int newTopK = originalTopK * cacheMultiplier;
+        // DISABLED: Over-fetching logic (no longer needed with proper cache warming)
+        // int newTopK = originalTopK * cacheMultiplier;
+        // When cache is properly warmed, we should get HITs every time, so no need to over-fetch
 
-        SearchRequest largerRequest = SearchRequest.builder()
+        SearchRequest primaryRequest = SearchRequest.builder()
                 .query(request.getQuery())
-                .topK(newTopK)
+                .topK(originalTopK)  // Use original topK, not multiplied
                 .similarityThreshold(request.getSimilarityThreshold())
                 .filterExpression(request.getFilterExpression())
                 .build();
 
         long primaryStartTime = System.currentTimeMillis();
-        List<Document> primaryResult = primary.similaritySearch(largerRequest);
+        List<Document> primaryResult = primary.similaritySearch(primaryRequest);
         long primaryEndTime = System.currentTimeMillis();
 
         metrics.recordPrimaryQueryTime(primaryEndTime - primaryStartTime);
 
-        logger.debug("Primary store returned {} documents (requested {})",
-                    primaryResult.size(), newTopK);
+        logger.info("📊 Primary store returned {} documents (requested {}, took {}ms)",
+                    primaryResult.size(), originalTopK, (primaryEndTime - primaryStartTime));
 
-        // Warm the cache with over-fetched results
-        if (!primaryResult.isEmpty()) {
-            logger.debug("Warming cache with {} documents", primaryResult.size());
-            try {
-                cache.add(primaryResult);
-                metrics.recordCacheWarmingSuccess(primaryResult.size());
-            } catch (Exception e) {
-                logger.warn("Failed to warm cache: {}", e.getMessage());
-                metrics.recordCacheWarmingFailure();
-                // Continue even if cache warming fails - return results from primary
+        // Warm the cache - NEW APPROACH: Fetch ALL customer documents
+        if (!primaryResult.isEmpty() && directWarmer.isEnabled()) {
+            // Extract customer ID from filter expression if available
+            Integer customerId = extractCustomerIdFromFilter(request.getFilterExpression());
+
+            if (customerId != null) {
+                logger.info("🔥 Warming cache with ALL documents for customer {}", customerId);
+                long warmStartTime = System.currentTimeMillis();
+                boolean warmingSuccess = directWarmer.warmCacheForCustomer(customerId);
+                long warmEndTime = System.currentTimeMillis();
+
+                if (warmingSuccess) {
+                    // Query GemFire to see how many docs were actually warmed
+                    int warmedCount = primaryResult.size(); // Use primary result size as approximation
+                    metrics.recordCacheWarmingSuccess(warmedCount);
+                    logger.info("✅ Cache warming SUCCESS for customer {} ({}ms)", customerId, (warmEndTime - warmStartTime));
+                } else {
+                    metrics.recordCacheWarmingFailure();
+                    logger.warn("⚠️  Cache warming FAILED for customer {}", customerId);
+                }
+            } else {
+                // Fallback to old similarity-based warming if no customer ID filter
+                logger.debug("No customer filter found, using similarity-based warming with {} documents", primaryResult.size());
+                boolean warmingSuccess = directWarmer.warmCache(primaryResult);
+
+                if (warmingSuccess) {
+                    metrics.recordCacheWarmingSuccess(primaryResult.size());
+                } else {
+                    metrics.recordCacheWarmingFailure();
+                }
             }
         }
 
@@ -135,6 +163,42 @@ public class CachingVectorStore implements VectorStore {
         }
 
         return primaryResult;
+    }
+
+    /**
+     * Extract customer ID from filter expression.
+     * Looks for eq("refnum1", value) pattern in the filter.
+     *
+     * @param filterExpression The filter expression to parse
+     * @return Customer ID if found, null otherwise
+     */
+    private Integer extractCustomerIdFromFilter(Filter.Expression filterExpression) {
+        if (filterExpression == null) {
+            return null;
+        }
+
+        try {
+            // Convert filter to string and parse it
+            // FilterExpressionBuilder().eq("refnum1", 1001) produces: refnum1 == 1001
+            String filterString = filterExpression.toString();
+            logger.debug("Parsing filter expression: {}", filterString);
+
+            // Look for pattern: refnum1 == <number>
+            if (filterString.contains("refnum1")) {
+                String[] parts = filterString.split("==");
+                if (parts.length == 2) {
+                    String valueStr = parts[1].trim();
+                    // Remove any quotes if present
+                    valueStr = valueStr.replace("'", "").replace("\"", "");
+                    return Integer.parseInt(valueStr);
+                }
+            }
+
+        } catch (Exception e) {
+            logger.warn("Failed to extract customer ID from filter: {}", e.getMessage());
+        }
+
+        return null;
     }
 }
 

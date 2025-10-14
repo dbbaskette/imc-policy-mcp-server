@@ -2,11 +2,11 @@ package com.insurancemegacorp.policymcpserver.config;
 
 import com.insurancemegacorp.policymcpserver.service.CachingVectorStore;
 import com.insurancemegacorp.policymcpserver.service.VectorCacheMetrics;
+import com.insurancemegacorp.policymcpserver.vectorstore.AuthenticatedGemFireVectorStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.ai.vectorstore.gemfire.GemFireVectorStore;
 import org.springframework.ai.vectorstore.pgvector.PgVectorStore;
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgDistanceType.COSINE_DISTANCE;
 import static org.springframework.ai.vectorstore.pgvector.PgVectorStore.PgIndexType.HNSW;
@@ -53,6 +53,9 @@ public class VectorStoreConfig {
 
     @Value("${spring.ai.vectorstore.gemfire.password:}")
     private String gemfirePassword;
+
+    @Value("${spring.ai.vectorstore.gemfire.initialize-schema:false}")
+    private boolean gemfireInitializeSchema;
 
     /**
      * Custom RestClient builder for GemFire with Basic Authentication.
@@ -113,16 +116,16 @@ public class VectorStoreConfig {
         logger.warn("If not enabled, queries will fall back to Postgres only (no caching).");
         logger.warn("To enable: cf update-service imc-cache -c '{{\"enable_vector_db\": true}}'");
 
-        // Authentication is configured via the webClientBuilder() bean above
-        // GemFireVectorStore will auto-discover and use the WebClient.Builder bean
-        // with Basic Auth headers if credentials are available
-
-        return GemFireVectorStore.builder(embeddingModel)
+        // Use our custom AuthenticatedGemFireVectorStore with Basic Authentication support
+        return AuthenticatedGemFireVectorStore.builder(embeddingModel)
                 .host(gemfireHost)
                 .port(gemfirePort)
                 .indexName(gemfireIndex)
                 .sslEnabled(gemfirePort == 443)  // Enable SSL for HTTPS (port 443)
-                .initializeSchema(false)  // Don't initialize - requires VectorDB to be pre-enabled
+                .initializeSchema(gemfireInitializeSchema)  // Read from property spring.ai.vectorstore.gemfire.initialize-schema
+                .username(gemfireUsername)
+                .password(gemfirePassword)
+                .fields(new String[] {"refnum1", "refnum2", "sourcePath", "timestamp"})  // Declare filterable metadata fields
                 .build();
     }
 
@@ -155,11 +158,12 @@ public class VectorStoreConfig {
     public VectorStore cachingVectorStore(
             @Qualifier("gemfireVectorStore") VectorStore gemfireVectorStore,
             @Qualifier("postgresVectorStore") VectorStore postgresVectorStore,
-            VectorCacheMetrics metrics) {
+            VectorCacheMetrics metrics,
+            com.insurancemegacorp.policymcpserver.service.DirectGemFireCacheWarmer directWarmer) {
 
         logger.info("Configuring caching vector store with multiplier={}", cacheMultiplier);
 
-        return new CachingVectorStore(gemfireVectorStore, postgresVectorStore, cacheMultiplier, metrics);
+        return new CachingVectorStore(gemfireVectorStore, postgresVectorStore, cacheMultiplier, metrics, directWarmer);
     }
 }
 
